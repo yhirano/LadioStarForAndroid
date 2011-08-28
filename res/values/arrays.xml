@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string-array name="server_entries">
+		<item>自動</item>
+		<item>std1.ladio.net:8000</item>
+		<item>std1.ladio.net:8010</item>
+		<item>std1.ladio.net:8020</item>
+		<item>std1.ladio.net:8030</item>
+		<item>std1.ladio.net:8040</item>
+		<item>std1.ladio.net:8050</item>
+		<item>std1.ladio.net:8060</item>
+		<item>std1.ladio.net:8070</item>
+		<item>std1.ladio.net:8080</item>
+		<item>std1.ladio.net:8090</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8110</item>
+		<item>std2.ladio.net:8120</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8160</item>
+		<item>std2.ladio.net:8170</item>
+		<item>std2.ladio.net:8180</item>
+		<item>std2.ladio.net:8190</item>
+	</string-array>
+	<string-array name="server_entryvalues">
+		<item></item>
+		<item>std1.ladio.net:8000</item>
+		<item>std1.ladio.net:8010</item>
+		<item>std1.ladio.net:8020</item>
+		<item>std1.ladio.net:8030</item>
+		<item>std1.ladio.net:8040</item>
+		<item>std1.ladio.net:8050</item>
+		<item>std1.ladio.net:8060</item>
+		<item>std1.ladio.net:8070</item>
+		<item>std1.ladio.net:8080</item>
+		<item>std1.ladio.net:8090</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8110</item>
+		<item>std2.ladio.net:8120</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8100</item>
+		<item>std2.ladio.net:8160</item>
+		<item>std2.ladio.net:8170</item>
+		<item>std2.ladio.net:8180</item>
+		<item>std2.ladio.net:8190</item>
+	</string-array>
+	<string-array name="bitrate_entries">
+		<item>24kbps</item>
+		<item>32kbps</item>
+		<item>48kbps</item>
+		<item>64kbps</item>
+	</string-array>
+	<string-array name="bitrate_entryvalues">
+		<item>24</item>
+		<item>32</item>
+		<item>48</item>
+		<item>64</item>
+	</string-array>
+	<string-array name="channel_entries">
+		<item>モノラル</item>
+		<item>ステレオ</item>
+	</string-array>
+	<string-array name="channel_entryvalues">
+		<item>1</item>
+		<item>2</item>
+	</string-array>
+	<string-array name="sample_rate_entries">
+		<item>8000Hz</item>
+		<item>11025Hz</item>
+		<item>16000Hz</item>
+		<item>22050Hz</item>
+		<item>44100Hz</item>
+	</string-array>
+	<string-array name="sample_rate_entryvalues">
+		<item>8000</item>
+		<item>11025</item>
+		<item>16000</item>
+		<item>22050</item>
+		<item>44100</item>
+	</string-array>
+	<string-array name="mp3_encode_quality_entries">
+		<!-- <item>最高品質</item> -->
+		<!-- <item>かなり高い</item> -->
+		<!-- <item>高い</item> -->
+		<!-- <item>高め</item> -->
+		<!-- <item>やや高め</item> -->
+		<item>並</item>
+		<!-- <item>やや低め</item> -->
+		<item>低め</item>
+		<!-- <item>低い</item> -->
+		<item>かなり低い（かなり低速な端末向け）</item>
+	</string-array>
+	<string-array name="mp3_encode_quality_entryvalues">
+		<!-- <item>0</item> -->
+		<!-- <item>1</item> -->
+		<!-- <item>2</item> -->
+		<!-- <item>3</item> -->
+		<!-- <item>4</item> -->
+		<item>5</item>
+		<!-- <item>6</item> -->
+		<item>7</item>
+		<!-- <item>8</item> -->
+		<item>9</item>
+	</string-array>
+</resources>
