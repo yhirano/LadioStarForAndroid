@@ -1,6 +1,7 @@
 # LadioStarForAndroid
 
-Ladio StarはAndroid用のねとらじ配信ソフトウェアです。
+Ladio StarはAndroid用の [livedoor ねとらじ](http://ladio.net/) 配信ソフトウェアです。
+
 Android端末からねとらじを配信することができます。
 
 ## 主な機能
@@ -9,4 +10,5 @@ Android端末からねとらじを配信することができます。
 
 ## ライセンス
 MIT License
+
 一部Apache Licenseのソースコードを含みます。
