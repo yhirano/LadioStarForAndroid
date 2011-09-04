@@ -12,16 +12,6 @@
 		<item>std1.ladio.net:8070</item>
 		<item>std1.ladio.net:8080</item>
 		<item>std1.ladio.net:8090</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8110</item>
-		<item>std2.ladio.net:8120</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8160</item>
-		<item>std2.ladio.net:8170</item>
-		<item>std2.ladio.net:8180</item>
-		<item>std2.ladio.net:8190</item>
 	</string-array>
 	<string-array name="server_entryvalues">
 		<item></item>
@@ -35,16 +25,6 @@
 		<item>std1.ladio.net:8070</item>
 		<item>std1.ladio.net:8080</item>
 		<item>std1.ladio.net:8090</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8110</item>
-		<item>std2.ladio.net:8120</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8100</item>
-		<item>std2.ladio.net:8160</item>
-		<item>std2.ladio.net:8170</item>
-		<item>std2.ladio.net:8180</item>
-		<item>std2.ladio.net:8190</item>
 	</string-array>
 	<string-array name="bitrate_entries">
 		<item>24kbps</item>
