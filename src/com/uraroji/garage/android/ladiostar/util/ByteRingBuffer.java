@@ -27,8 +27,8 @@ import java.nio.BufferOverflowException;
 /**
  * Ring buffer class.
  */
-public final class ShortRingBuffer {
-	private short[] buffer = null;
+public final class ByteRingBuffer {
+	private byte[] buffer = null;
 
 	private int size = 0;
 
@@ -42,9 +42,9 @@ public final class ShortRingBuffer {
 	 * @param size
 	 *            Size of ring buffer. (NOT bytes.)
 	 */
-	public ShortRingBuffer(int size) {
+	public ByteRingBuffer(int size) {
 		this.size = size;
-		buffer = new short[size];
+		buffer = new byte[size];
 	}
 
 	/**
@@ -94,7 +94,7 @@ public final class ShortRingBuffer {
 	 * @param offset
 	 * @param len
 	 */
-	public void put(short[] data, int offset, int len) {
+	public void put(byte[] data, int offset, int len) {
 		put(data, offset, len, false);
 	}
 
@@ -106,7 +106,7 @@ public final class ShortRingBuffer {
 	 * @param offset
 	 * @param len
 	 */
-	public void put(short[] data, int offset, int len, boolean overwrite) {
+	public void put(byte[] data, int offset, int len, boolean overwrite) {
 		if (len <= 0) {
 			return;
 		}
@@ -159,7 +159,7 @@ public final class ShortRingBuffer {
 	 * @param len
 	 * @return Read size. Error -1.
 	 */
-	public int get(short[] data, int offset, int len) {
+	public int get(byte[] data, int offset, int len) {
 		if (len <= 0) {
 			return 0;
 		}

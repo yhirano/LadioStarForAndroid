@@ -99,11 +99,16 @@ public interface BroadcastInterface {
 	 * @see BroadcastAtService#MSG_CONNECTED_SERVICE
 	 * @see BroadcastAtService#MSG_ERROR_START_SERVICE_CONNECTION
 	 * @see BroadcastAtService#MSG_ERROR_STOP_SERVICE_CONNECTION
-	 * @see VoiceSender#MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST
-	 * @see VoiceSender#MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER
 	 * @see VoiceSender#MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS
 	 * @see VoiceSender#MSG_ERROR_REC_START
 	 * @see VoiceSender#MSG_REC_STARTED
+	 * @see VoiceSender#MSG_ERROR_AUDIO_RECORD
+	 * @see VoiceSender#MSG_ERROR_PCM_BUFFER_OVERFLOW
+	 * @see VoiceSender#MSG_ENCODE_STARTED
+	 * @see VoiceSender#MSG_ERROR_AUDIO_ENCODE
+	 * @see VoiceSender#MSG_ERROR_MP3_BUFFER_OVERFLOW
+	 * @see VoiceSender#MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST
+	 * @see VoiceSender#MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER
 	 * @see VoiceSender#MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER
 	 * @see VoiceSender#MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA
 	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED
@@ -114,12 +119,9 @@ public interface BroadcastInterface {
 	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR
 	 * @see VoiceSender#MSG_ERROR_SEND_HEADER_DATA
 	 * @see VoiceSender#MSG_ERROR_RECV_HEADER_RESPONSE
-	 * @see VoiceSender#MSG_STARTED
-	 * @see VoiceSender#MSG_ERROR_AUDIO_RECORD
-	 * @see VoiceSender#MSG_ERROR_PCM_BUFFER_OVERFLOW
-	 * @see VoiceSender#MSG_ERROR_AUDIO_ENCODE
+	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
 	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
-	 * @see VoiceSender#MSG_STOPPED
+	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
 	 */
 	public void addBroadcastStateChangedHandler(Handler handler);
 

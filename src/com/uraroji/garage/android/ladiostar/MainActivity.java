@@ -140,10 +140,14 @@ public class MainActivity extends TabActivity {
 						.setPositiveButton(R.string.close, null).create()
 						.show();
 				break;
-			case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
-			case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
 			case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
 			case VoiceSender.MSG_ERROR_REC_START:
+			case VoiceSender.MSG_ERROR_AUDIO_RECORD:
+			case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
+			case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
+			case VoiceSender.MSG_ERROR_MP3_BUFFER_OVERFLOW:
+			case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
+			case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
 			case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
 			case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
 			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED:
@@ -154,15 +158,13 @@ public class MainActivity extends TabActivity {
 			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR:
 			case VoiceSender.MSG_ERROR_SEND_HEADER_DATA:
 			case VoiceSender.MSG_ERROR_RECV_HEADER_RESPONSE:
-			case VoiceSender.MSG_STARTED:
-			case VoiceSender.MSG_ERROR_AUDIO_RECORD:
-			case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
-			case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
 			case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
-			case VoiceSender.MSG_STOPPED:
+			case VoiceSender.MSG_SEND_STREAM_STARTED:
+			case VoiceSender.MSG_SEND_STREAM_ENDED:
 				switchViewAsBroadcastState();
 				break;
 			case VoiceSender.MSG_REC_STARTED:
+			case VoiceSender.MSG_ENCODE_STARTED:
 				break;
 			default:
 				Log.w(C.TAG, "Unknown received message " + msg.what + " when start.");
@@ -188,13 +190,6 @@ public class MainActivity extends TabActivity {
 						R.string.failed_rec_stop, Toast.LENGTH_LONG)
 						.show();
 				break;
-			case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
-			case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server, Toast.LENGTH_LONG)
-						.show();
-				break;
 			case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
 				switchViewAsBroadcastState();
 				Toast.makeText(MainActivity.this,
@@ -209,7 +204,40 @@ public class MainActivity extends TabActivity {
 				break;
 			case VoiceSender.MSG_REC_STARTED:
 				break;
+			case VoiceSender.MSG_ERROR_AUDIO_RECORD:
+				switchViewAsBroadcastState();
+				Toast.makeText(MainActivity.this,
+						R.string.disable_rec, Toast.LENGTH_LONG)
+						.show();
+				break;
+			case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
+				switchViewAsBroadcastState();
+				Toast.makeText(MainActivity.this,
+						R.string.encode_too_slow, Toast.LENGTH_LONG)
+						.show();
+				break;
+			case VoiceSender.MSG_ENCODE_STARTED:
+				break;
+			case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
+				switchViewAsBroadcastState();
+				Toast.makeText(MainActivity.this,
+						R.string.disable_encode, Toast.LENGTH_LONG)
+						.show();
+				break;
+			case VoiceSender.MSG_ERROR_MP3_BUFFER_OVERFLOW:
+			case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
+			case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
+				switchViewAsBroadcastState();
+				Toast.makeText(MainActivity.this,
+						R.string.disable_connect_server, Toast.LENGTH_LONG)
+						.show();
+				break;
 			case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
+				switchViewAsBroadcastState();
+				Toast.makeText(MainActivity.this,
+						R.string.send_data_too_slow, Toast.LENGTH_LONG)
+						.show();
+				break;
 			case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
 				switchViewAsBroadcastState();
 				Toast.makeText(MainActivity.this,
@@ -259,40 +287,14 @@ public class MainActivity extends TabActivity {
 						R.string.disable_connect_server, Toast.LENGTH_LONG)
 						.show();
 				break;
-			case VoiceSender.MSG_STARTED:
+			case VoiceSender.MSG_SEND_STREAM_STARTED:
+			case VoiceSender.MSG_SEND_STREAM_ENDED:
 				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.broadcast_started, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_AUDIO_RECORD:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_rec, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.encode_too_slow, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_encode, Toast.LENGTH_LONG)
-						.show();
 				break;
 			case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
 				switchViewAsBroadcastState();
 				Toast.makeText(MainActivity.this,
 						R.string.disconnected_server, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_STOPPED:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.broadcast_stopped, Toast.LENGTH_LONG)
 						.show();
 				break;
 			default:
@@ -1019,12 +1021,14 @@ public class MainActivity extends TabActivity {
 			@Override
 			public void handleMessage(Message msg) {
 				switch (msg.what) {
-				case BroadcastAtService.MSG_ERROR_START_SERVICE_CONNECTION:
-				case BroadcastAtService.MSG_ERROR_STOP_SERVICE_CONNECTION:
-				case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
-				case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
 				case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
 				case VoiceSender.MSG_ERROR_REC_START:
+				case VoiceSender.MSG_ERROR_AUDIO_RECORD:
+				case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
+				case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
+				case VoiceSender.MSG_ERROR_MP3_BUFFER_OVERFLOW:
+				case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
+				case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
 				case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
 				case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
 				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED:
@@ -1035,7 +1039,9 @@ public class MainActivity extends TabActivity {
 				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR:
 				case VoiceSender.MSG_ERROR_SEND_HEADER_DATA:
 				case VoiceSender.MSG_ERROR_RECV_HEADER_RESPONSE:
-				case VoiceSender.MSG_STARTED:
+				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
+				case VoiceSender.MSG_SEND_STREAM_STARTED:
+				case VoiceSender.MSG_SEND_STREAM_ENDED:
 					loadingDialog.dismiss();
 					/*
 					 * このHandlerは接続中のプログレスダイアログを消すだけなので、
@@ -1044,11 +1050,7 @@ public class MainActivity extends TabActivity {
 					BroadcastManager.removeBroadcastStateChangedHandler(this);
 					break;
 				case VoiceSender.MSG_REC_STARTED:
-				case VoiceSender.MSG_ERROR_AUDIO_RECORD:
-				case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
-				case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
-				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
-				case VoiceSender.MSG_STOPPED:
+				case VoiceSender.MSG_ENCODE_STARTED:
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what + " when dismiss start dialog.");
@@ -1087,11 +1089,26 @@ public class MainActivity extends TabActivity {
 			@Override
 			public void handleMessage(Message msg) {
 				switch (msg.what) {
+				case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
+				case VoiceSender.MSG_ERROR_REC_START:
 				case VoiceSender.MSG_ERROR_AUDIO_RECORD:
 				case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
 				case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
+				case VoiceSender.MSG_ERROR_MP3_BUFFER_OVERFLOW:
+				case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
+				case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
+				case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
+				case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
+				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED:
+				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE:
+				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG:
+				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED:
+				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED:
+				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR:
+				case VoiceSender.MSG_ERROR_SEND_HEADER_DATA:
+				case VoiceSender.MSG_ERROR_RECV_HEADER_RESPONSE:
 				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
-				case VoiceSender.MSG_STOPPED:
+				case VoiceSender.MSG_SEND_STREAM_ENDED:
 					// プログレスダイアログを消すだけ。メッセージの表示は別のHandlerで表示している。
 					loadingDialog.dismiss();
 					switchViewAsBroadcastState();
@@ -1104,6 +1121,10 @@ public class MainActivity extends TabActivity {
 							.setMessage(R.string.failed_rec_stop)
 							.setPositiveButton(R.string.close, null).create()
 							.show();
+					break;
+				case VoiceSender.MSG_REC_STARTED:
+				case VoiceSender.MSG_ENCODE_STARTED:
+				case VoiceSender.MSG_SEND_STREAM_STARTED:
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what

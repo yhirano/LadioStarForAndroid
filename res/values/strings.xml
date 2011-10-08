@@ -70,7 +70,8 @@
     <string name="disable_rec_start_change_channel_or_sample">録音が開始できませんでした。モノラル/ステレオ設定、サンプリングレートの設定を変更してみてください。</string>
     <string name="disable_rec_start">録音が開始できませんでした</string>
     <string name="disconnect_server">ねとらじサーバと切断しました</string>
-    <string name="encode_too_slow">ねとらじ配信を中止しました。録音に対して、MP3エンコードとデータ送信が間に合いません。ビットレートを下げる・モノラルにする・サンプリングレートを下げる・エンコード品質を下げるなどすると、状況が改善するかもしれません。</string>
+    <string name="encode_too_slow">ねとらじ配信を中止しました。MP3エンコードが間に合いません。ビットレートを下げる・モノラルにする・サンプリングレートを下げる・エンコード品質を下げるなどすると、状況が改善するかもしれません。</string>
+    <string name="send_data_too_slow">ねとらじ配信を中止しました。送信が間に合いません。ビットレートを下げると、状況が改善するかもしれません。</string>
     <string name="disable_rec">録音できませんでした</string>
     <string name="broadcasting">配信中</string>
     <string name="not_broadcasting">未配信</string>

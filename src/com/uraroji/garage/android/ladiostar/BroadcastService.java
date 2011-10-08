@@ -73,12 +73,6 @@ public class BroadcastService extends Service {
 			@Override
 			public void handleMessage(Message msg) {
 				switch (msg.what) {
-				case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
-				case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
-					Toast.makeText(BroadcastService.this,
-							R.string.disable_connect_server, Toast.LENGTH_LONG)
-							.show();
-					break;
 				case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
 					Toast.makeText(
 							BroadcastService.this,
@@ -92,17 +86,36 @@ public class BroadcastService extends Service {
 					break;
 				case VoiceSender.MSG_REC_STARTED:
 					break;
-				case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
-				case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
+				case VoiceSender.MSG_ERROR_AUDIO_RECORD:
+					Toast.makeText(BroadcastService.this, R.string.disable_rec,
+							Toast.LENGTH_LONG).show();
+					break;
+				case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
+					Toast.makeText(BroadcastService.this,
+							R.string.encode_too_slow, Toast.LENGTH_LONG).show();
+					break;
+				case VoiceSender.MSG_ENCODE_STARTED:
+					break;
+				case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
+					Toast.makeText(BroadcastService.this,
+							R.string.disable_encode, Toast.LENGTH_LONG).show();
+					break;
+				case VoiceSender.MSG_ERROR_MP3_BUFFER_OVERFLOW:
+					Toast.makeText(BroadcastService.this,
+							R.string.send_data_too_slow, Toast.LENGTH_LONG).show();
+					break;
+				case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
+				case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
 					Toast.makeText(BroadcastService.this,
 							R.string.disable_connect_server, Toast.LENGTH_LONG)
 							.show();
 					break;
+				case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
+				case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
 				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED:
-					Toast.makeText(
-							BroadcastService.this,
-							R.string.disable_connect_server_authentication_required,
-							Toast.LENGTH_LONG).show();
+					Toast.makeText(BroadcastService.this,
+							R.string.disable_connect_server, Toast.LENGTH_LONG)
+							.show();
 					break;
 				case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE:
 					Toast.makeText(BroadcastService.this,
@@ -138,32 +151,14 @@ public class BroadcastService extends Service {
 							R.string.disable_connect_server, Toast.LENGTH_LONG)
 							.show();
 					break;
-				case VoiceSender.MSG_STARTED:
-					Toast.makeText(BroadcastService.this,
-							R.string.broadcast_started, Toast.LENGTH_LONG)
-							.show();
-					break;
-				case VoiceSender.MSG_ERROR_AUDIO_RECORD:
-					Toast.makeText(BroadcastService.this, R.string.disable_rec,
-							Toast.LENGTH_LONG).show();
-					break;
-				case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
-					Toast.makeText(BroadcastService.this,
-							R.string.encode_too_slow, Toast.LENGTH_LONG).show();
-					break;
-				case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
-					Toast.makeText(BroadcastService.this,
-							R.string.disable_encode, Toast.LENGTH_LONG).show();
+				case VoiceSender.MSG_SEND_STREAM_STARTED:
 					break;
 				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
 					Toast.makeText(BroadcastService.this,
 							R.string.disconnected_server, Toast.LENGTH_LONG)
 							.show();
 					break;
-				case VoiceSender.MSG_STOPPED:
-					Toast.makeText(BroadcastService.this,
-							R.string.broadcast_stopped, Toast.LENGTH_LONG)
-							.show();
+				case VoiceSender.MSG_SEND_STREAM_ENDED:
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what

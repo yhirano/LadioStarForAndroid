@@ -43,6 +43,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
+import com.uraroji.garage.android.ladiostar.util.ByteRingBuffer;
 import com.uraroji.garage.android.ladiostar.util.ShortRingBuffer;
 import com.uraroji.garage.android.lame.SimpleLame;
 import com.uraroji.garage.android.netladiolib.Server;
@@ -62,28 +63,12 @@ public class VoiceSender {
 	}
 
 	/**
-	 * ねとらじのサーバに接続が失敗した。 サーバ情報一覧が取得できない。
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST = 0;
-
-	/**
-	 * ねとらじの配信サーバが見つからない。何からの理由で配信サーバを自動で選定することができなかった。
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER = 1;
-
-	/**
 	 * サンプリングレート等の録音設定を端末がサポートしていない可能性がある
 	 * 
 	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
 	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS = 2;
+	public static final int MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS = 0;
 
 	/**
 	 * 録音の開始に失敗した
@@ -91,140 +76,155 @@ public class VoiceSender {
 	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
 	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_ERROR_REC_START = 3;
+	public static final int MSG_ERROR_REC_START = 1;
 
 	/**
 	 * 録音が開始した
-	 * 
-	 * {@link VoiceSender#MSG_STARTED} は録音とデータ送信処理が開始した場合に発行されるが、
-	 * {@link VoiceSender#MSG_REC_STARTED} は録音開始自に発行される。
 	 */
-	public static final int MSG_REC_STARTED = 4;
-
-	/**
-	 * ねとらじサーバへ接続するソケットが生成できなかった
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER = 5;
-
-	/**
-	 * 録音開始から送信開始までの待ち時間に割り込みがかかった
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA = 6;
-
-	/**
-	 * 認証失敗
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED = 7;
-
-	/**
-	 * 同名のマウントが使用中
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE = 8;
-
-	/**
-	 * マウント名前が長すぎるか短すぎる
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG = 9;
-
-	/**
-	 * サポート外のストリーム
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED = 10;
-
-	/**
-	 * 混んでいて接続できない
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED = 11;
-
-	/**
-	 * 未知のレスポンスを受信した
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR = 12;
-
-	/**
-	 * ヘッダの送信に失敗した
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_SEND_HEADER_DATA = 13;
-
-	/**
-	 * ヘッダのレスポンス受信に失敗した
-	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも前に発行される。<br />
-	 * このメッセージが発行された直後に処理は終了する。
-	 */
-	public static final int MSG_ERROR_RECV_HEADER_RESPONSE = 14;
-
-	/**
-	 * 録音とデータ送信処理が開始した
-	 */
-	public static final int MSG_STARTED = 15;
+	public static final int MSG_REC_STARTED = 2;
 
 	/**
 	 * 録音ができない
 	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも後に発行される。<br />
+	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_REC_STARTED} よりも後に発行される。<br />
 	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_ERROR_AUDIO_RECORD = 16;
+	public static final int MSG_ERROR_AUDIO_RECORD = 3;
 
 	/**
 	 * 録音に対してエンコードが遅いなどの理由でバッファオーバーフローした
 	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも後に発行される。<br />
+	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_REC_STARTED} よりも後に発行される。<br />
 	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_ERROR_PCM_BUFFER_OVERFLOW = 17;
+	public static final int MSG_ERROR_PCM_BUFFER_OVERFLOW = 4;
+
+	/**
+	 * エンコードが開始した
+	 */
+	public static final int MSG_ENCODE_STARTED = 5;
 
 	/**
 	 * エンコードに失敗した
 	 * 
 	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも後に発行される。<br />
+	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_ENCODE_STARTED} よりも後に発行される。<br />
 	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_ERROR_AUDIO_ENCODE = 18;
+	public static final int MSG_ERROR_AUDIO_ENCODE = 6;
+
+	/**
+	 * エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
+	 * 
+	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_ENCODE_STARTED} よりも後に発行される。<br />
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_MP3_BUFFER_OVERFLOW = 7;
+	
+	/**
+	 * ねとらじのサーバに接続が失敗した。 サーバ情報一覧が取得できない。
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST = 8;
+
+	/**
+	 * ねとらじの配信サーバが見つからない。何からの理由で配信サーバを自動で選定することができなかった。
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER = 9;
+
+	/**
+	 * ねとらじサーバへ接続するソケットが生成できなかった
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER = 10;
+
+	/**
+	 * 録音開始から送信開始までの待ち時間に割り込みがかかった
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA = 11;
+
+	/**
+	 * 認証失敗
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED = 12;
+
+	/**
+	 * 同名のマウントが使用中
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE = 13;
+
+	/**
+	 * マウント名前が長すぎるか短すぎる
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG = 14;
+
+	/**
+	 * サポート外のストリーム
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED = 15;
+
+	/**
+	 * 混んでいて接続できない
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED = 16;
+
+	/**
+	 * 未知のレスポンスを受信した
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR = 17;
+
+	/**
+	 * ヘッダの送信に失敗した
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_SEND_HEADER_DATA = 18;
+
+	/**
+	 * ヘッダのレスポンス受信に失敗した
+	 * 
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_ERROR_RECV_HEADER_RESPONSE = 19;
+
+	/**
+	 * ストリームの配信を開始した
+	 */
+	public static final int MSG_SEND_STREAM_STARTED = 20;
 
 	/**
 	 * ストリームの送信に失敗した
 	 * 
-	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_STARTED} よりも後に発行される。<br />
+	 * エラーがあった場合、このメッセージは {@link VoiceSender#MSG_SEND_STREAM_STARTED} よりも後に発行される。<br />
 	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_ERROR_SEND_STREAM_DATA = 19;
+	public static final int MSG_ERROR_SEND_STREAM_DATA = 21;
 
 	/**
-	 * 録音とデータ送信処理が正常に終了した
+	 * ストリームの配信を正常に終了した
 	 * 
-	 * {@link VoiceSender#stop()}で正常に終了した場合にのみ発行される。
+	 * このメッセージは {@link VoiceSender#MSG_ERROR_SEND_STREAM_DATA} が発行された場合には発行されない。<br />
+	 * このメッセージが発行された直後に処理は終了する。
 	 */
-	public static final int MSG_STOPPED = 20;
+	public static final int MSG_SEND_STREAM_ENDED = 22;
 
 	/**
 	 * ねとらじサーバに通知するUserAgent
@@ -232,25 +232,29 @@ public class VoiceSender {
 	private static String sUserAgent;
 	
 	/**
+	 * PCMバッファ（エンコード待ちデータ）
+	 */
+	private ShortRingBuffer mPcmBuffer;
+
+	/**
+	 * PCMバッファのロックオブジェクト
+	 */
+	private final Object mPcmBufferLock = new Object();
+
+	/**
+	 * MP3バッファ（送信待ちデータ）
+	 */
+	private ByteRingBuffer mMp3Buffer;
+
+	/**
+	 * MP3バッファのロックオブジェクト
+	 */
+	private final Object mMp3BufferLock = new Object();
+
+	/**
 	 * 動作中か
 	 */
 	private volatile boolean mIsWorking = false;
-
-	/**
-	 * 録音中か。内部フラグ。
-	 * 
-	 * {@link VoiceSender#MSG_STARTED} と {@link VoiceSender#MSG_STOPPED}
-	 * の送信管理以外には使用しないこと
-	 */
-	private volatile boolean mIsRecStarted = false;
-
-	/**
-	 * 接続中か。内部フラグ。
-	 * 
-	 * {@link VoiceSender#MSG_STARTED} と {@link VoiceSender#MSG_STOPPED}
-	 * の送信管理以外には使用しないこと
-	 */
-	private volatile boolean mIsConnected = false;
 
 	/**
 	 * 音量
@@ -300,16 +304,6 @@ public class VoiceSender {
 	private final Object mHandlerListLock = new Object();
 
 	/**
-	 * {@link VoiceSender#MSG_STARTED} と {@link VoiceSender#MSG_STOPPED}
-	 * の送信ロックオブジェクト。
-	 * 
-	 * {@link VoiceSender#MSG_STARTED} は2つのスレッドのどちらかから送信する実装になっているので、
-	 * どちらかのスレッドで送信中にもう一方のスレッドで送信してしまわないようにするためのロック。
-	 * {@link VoiceSender#MSG_STOPPED} でも同様の実装なのでこのロックを使用する。
-	 */
-	private final Object mSendMsgStartStopLock = new Object();
-
-	/**
 	 * コンストラクタ
 	 */
 	public VoiceSender() {
@@ -334,542 +328,696 @@ public class VoiceSender {
 			return;
 		}
 
-		final int channelConfig = getAudioChannelConfig(broadcastConfig.getAudioChannel());
-		
 		/*
-		 * PCMバッファサイズ。指定の秒数分だけ確保する。
+		 * PCMバッファ（エンコード待ちバッファ）を生成する
+		 * 
+		 * PCMバッファサイズは指定の秒数分だけ確保する。
 		 * 16bit PCMなので、サンプリングレート * チャンネル数 * 2byte(16bit) * 秒数でバッファサイズを計算
 		 */
-		final int pcmBufferSize = broadcastConfig.getAudioSampleRate()
-				* broadcastConfig.getAudioChannel() * 2 * C.PCM_BUFFER_SEC;
-		// PCMバッファ（エンコード待ちバッファ）
-		final ShortRingBuffer pcmBuffer = new ShortRingBuffer(pcmBufferSize);
-		// PCMバッファのロックオブジェクト
-		final Object pcmBufferLock = new Object();
-		Log.d(C.TAG, "PCM buffersize is " + String.valueOf(pcmBufferSize)
+		synchronized (mPcmBufferLock) {
+			mPcmBuffer = new ShortRingBuffer((broadcastConfig.getAudioSampleRate()
+					* broadcastConfig.getAudioChannel() * 2 * C.PCM_BUFFER_SEC) + 2);
+		}
+		Log.d(C.TAG, "PCM buffersize is " + String.valueOf(mPcmBuffer.size() * 2)
+				+ " bytes.");
+
+		/*
+		 * MP3バッファ（送信待ちバッファ）を生成する
+		 * 
+		 * MP3バッファサイズは指定の秒数分だけ確保する。
+		 */
+		synchronized (mMp3BufferLock) {
+			mMp3Buffer = new ByteRingBuffer(
+					(((broadcastConfig.getAudioBrate() / 8) * 1024) * C.MP3_BUFFER_SEC) + 2);
+		}
+		Log.d(C.TAG, "MP3 buffersize is " + String.valueOf(mMp3Buffer.size())
 				+ " bytes.");
 
 		mIsWorking = true; // 動作の開始フラグを立てる
 
-		// 内部フラグ初期化
-		mIsRecStarted = false;
-		mIsConnected = false;
+		(new RecThread(broadcastConfig)).start();
+		(new EncodeThread(broadcastConfig)).start();
+		(new SendDataThread(broadcastConfig)).start();
+	}
+	
+	/**
+	 * 録音スレッド
+	 */
+	private class RecThread extends Thread {
 
-		// 録音を別スレッドで開始する
-		new Thread() {
+		/**
+		 * 配信設定
+		 */
+		private BroadcastConfig mBroadcastConfig;
 
-			@Override
-			public void run() {
-				Log.d(C.TAG, "Start Record thread.");
+		/**
+		 * コンストラクタ
+		 * 
+		 * @param broadcastConfig
+		 *            配信設定
+		 */
+		public RecThread(final BroadcastConfig broadcastConfig) {
+			mBroadcastConfig = broadcastConfig;
+		}
 
-				try {
-					android.os.Process
-							.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
-					// 録音に最低限必要なバッファサイズ
-					final int recBufferSizeMin = AudioRecord.getMinBufferSize(
-							broadcastConfig.getAudioSampleRate(),
-							channelConfig, AudioFormat.ENCODING_PCM_16BIT);
-					// バッファサイズが取得できない。サンプリングレート等の設定を端末がサポートしていない可能性がある。
-					if (recBufferSizeMin < 0) {
-						mIsWorking = false; // 動作中フラグを下げる
-						notifyRecStateChangedHandle(MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS);
-						// エラー名を変える
-						return;
-					}
-					/*
-					 * 録音に最低限必要なバッファサイズよりも、エンコード待ちバッファサイズの方が小さい場合は否応なしに中止にする。
-					 * PCMバッファサイズを大きくすること。
-					 */
-					assert (recBufferSizeMin > pcmBufferSize);
-					// 録音バッファサイズ。指定の秒数分だけ確保する。
-					int recBufferSize = broadcastConfig.getAudioSampleRate()
-							* broadcastConfig.getAudioChannel() * 2
-							* C.REC_BUFFER_SEC;
-					Log.d(C.TAG,
-							"Recording buffersize is "
-									+ String.valueOf(recBufferSize) + " bytes.");
-					AudioRecord audioRecord = new AudioRecord(
-							MediaRecorder.AudioSource.MIC,
-							broadcastConfig.getAudioSampleRate(),
-							channelConfig, AudioFormat.ENCODING_PCM_16BIT,
-							recBufferSize);
-					short[] recBuffer = new short[recBufferSize];
+		@Override
+		public void run() {
+			Log.d(C.TAG, "Start Record thread.");
 
-					try {
-						try {
-							audioRecord.startRecording(); // 録音を開始する
-						} catch (IllegalStateException e) {
-							Log.w(C.TAG,
-									"IllegalStateException occurred when audio record start.",
-									e);
-							mIsWorking = false; // 動作中フラグを下げる
-							// 録音の開始に失敗した
-							notifyRecStateChangedHandle(MSG_ERROR_REC_START);
-							return;
-						}
+			try {
+				android.os.Process
+						.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 
-						mRecStartTime = System.currentTimeMillis(); // 録音を開始した時刻を記憶する
+				final int channelConfig = getAudioChannelConfig(mBroadcastConfig
+						.getAudioChannel());
 
-						// 録音が開始した
-						notifyRecStateChangedHandle(MSG_REC_STARTED);
-
-						// 録音開始と接続開始がそろっていたら MSG_STARTED を送信する
-						synchronized (mSendMsgStartStopLock) {
-							if (mIsConnected == true) {
-								// 録音とデータ送信が開始した
-								notifyRecStateChangedHandle(MSG_STARTED);
-							}
-							mIsRecStarted = true;
-						}
-
-						int readSize = 0;
-						while (mIsWorking) {
-							readSize = audioRecord.read(recBuffer, 0,
-									recBufferSize);
-							if (readSize < 0) {
-								mIsWorking = false; // 動作中フラグを下げる
-								// 録音ができない
-								notifyRecStateChangedHandle(MSG_ERROR_AUDIO_RECORD);
-								return;
-							}
-							// データが読み込めなかった場合は何もしない
-							else if (readSize == 0) {
-								;
-							}
-							// データが入っている場合
-							else {
-								try {
-									int availableDataSize = 0;
-									synchronized (pcmBufferLock) {
-										// 音声のボリュームを調整する
-										if (isVolumeRateEnable() == true) {
-											int vi;
-											short vs;
-											for (int i = 0; i < readSize; ++i) {
-												vi = (int)(recBuffer[i] * mVolumeRateFloat);
-												if (vi > Short.MAX_VALUE) {
-													vs = Short.MAX_VALUE;
-												} else if (vi < Short.MIN_VALUE) {
-													vs = Short.MIN_VALUE;
-												} else {
-													vs = (short) vi;
-												}
-												recBuffer[i] = vs;
-											}
-										}
-										
-										// バッファに書き込む
-										pcmBuffer.put(recBuffer, 0, readSize);
-										availableDataSize = pcmBuffer
-												.getAvailable();
-										if (C.WAIT_TO_WROTE_PCM_BUFFER) {
-											pcmBufferLock.notifyAll();
-											if (C.LOCAL_LOG) {
-												Log.v(C.TAG,
-														"Notify to write PCM buffer.");
-											}
-										}
-									}
-									if (C.LOCAL_LOG) {
-										Log.v(C.TAG,
-												"Wrote PCM buffer("
-														+ String.valueOf(readSize)
-														+ " bytes). Available buffersize is "
-														+ String.valueOf(availableDataSize)
-														+ " bytes.");
-									}
-								} catch (BufferOverflowException e) {
-									Log.w(C.TAG,
-											"MP3 encoding is slow, it seems to have PCM buffer overflowed.");
-									mIsWorking = false; // 動作中フラグを下げる
-									// 録音に対してエンコードが遅いなどの理由でバッファオーバーフローした
-									notifyRecStateChangedHandle(MSG_ERROR_PCM_BUFFER_OVERFLOW);
-									return;
-								}
-							}
-						}
-					} finally {
-						audioRecord.stop(); // 録音を停止する
-						audioRecord.release();
-						mRecStartTime = -1;
-					}
-
-					// 録音終了と接続終了がそろっていたら MSG_STOPPED を送信する
-					synchronized (mSendMsgStartStopLock) {
-						if (mIsConnected == false) {
-							// 録音が終了した
-							notifyRecStateChangedHandle(MSG_STOPPED);
-						}
-						mIsRecStarted = false;
-					}
-				} finally {
-					Log.d(C.TAG, "Finish Record thread.");
+				// 録音に最低限必要なバッファサイズ
+				final int recBufferSizeMin = AudioRecord.getMinBufferSize(
+						mBroadcastConfig.getAudioSampleRate(), channelConfig,
+						AudioFormat.ENCODING_PCM_16BIT);
+				// バッファサイズが取得できない。サンプリングレート等の設定を端末がサポートしていない可能性がある。
+				if (recBufferSizeMin < 0) {
+					mIsWorking = false; // 動作中フラグを下げる
+					notifyRecStateChangedHandle(MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS);
+					// エラー名を変える
+					return;
 				}
-			}
-		}.start();
-
-		// エンコードと送信を別スレッドで開始する
-		new Thread() {
-
-			@Override
-			public void run() {
-				Log.d(C.TAG, "Start Encode and Send data thread.");
+				/*
+				 * 録音に最低限必要なバッファサイズよりも、エンコード待ちバッファサイズの方が小さい場合は否応なしに中止にする。
+				 * PCMバッファサイズを大きくすること。
+				 */
+				assert (recBufferSizeMin > mPcmBuffer.size());
+				// 録音バッファサイズ。指定の秒数分だけ確保する。
+				final int recBufferSize = mBroadcastConfig.getAudioSampleRate()
+						* mBroadcastConfig.getAudioChannel() * 2
+						* C.REC_BUFFER_SEC;
+				Log.d(C.TAG,
+						"Recording buffersize is "
+								+ String.valueOf(recBufferSize) + " bytes.");
+				AudioRecord audioRecord = new AudioRecord(
+						MediaRecorder.AudioSource.MIC,
+						mBroadcastConfig.getAudioSampleRate(), channelConfig,
+						AudioFormat.ENCODING_PCM_16BIT, recBufferSize);
+				short[] recBuffer = new short[recBufferSize];
 
 				try {
-					// ねとらじの接続先サーバ
-					Server broadcastServer = null;
-
-					// 接続先のサーバを決める
-					{
-						// 配信サーバ情報リストを取得する
-						ServersInfo serversInfo = new ServersInfo();
-						try {
-							serversInfo.fetchServerInfo();
-						} catch (IOException e) {
-							Log.w(C.TAG,
-									"IOException occurred when fetch netladio server information.",
-									e);
-							mIsWorking = false; // 動作中フラグを下げる
-							notifyRecStateChangedHandle(MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST);
-							return;
-						}
-						
-						// 配信サーバを設定していない場合はもっとも空いているサーバを取得する
-						if (broadcastConfig.getChannelServer() == null
-								|| broadcastConfig.getChannelServer().length() == 0) {
-							broadcastServer = serversInfo.getVacantServer();
-						}
-						// 配信サーバを設定している場合
-						else {
-							broadcastServer = serversInfo.getServer(broadcastConfig.getChannelServer());
-						}
-
-						// 何らかの理由で配信サーバが決まらなかった場合はエラーで終了
-						if (broadcastServer == null) {
-							Log.w(C.TAG, "Not found the broadcast server.");
-							mIsWorking = false; // 動作中フラグを下げる
-							notifyRecStateChangedHandle(MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER);
-							return;
-						}
-					}
-
-					Socket socket = null;
-					InputStream sockIn = null;
-					OutputStream sockOut = null;
 					try {
-						socket = new Socket(broadcastServer.getServerName()
-								.getName(), broadcastServer.getServerName()
-								.getPort());
-						sockIn = socket.getInputStream();
-						sockOut = socket.getOutputStream();
-					} catch (UnknownHostException e) {
+						audioRecord.startRecording(); // 録音を開始する
+					} catch (IllegalStateException e) {
 						Log.w(C.TAG,
-								"UnknownHostException occurred when create socket.",
+								"IllegalStateException occurred when audio record start.",
 								e);
 						mIsWorking = false; // 動作中フラグを下げる
-						notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
-						return;
-					} catch (IOException e) {
-						Log.w(C.TAG,
-								"IOException occurred when create socket.", e);
-						mIsWorking = false; // 動作中フラグを下げる
-						notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+						// 録音の開始に失敗した
+						notifyRecStateChangedHandle(MSG_ERROR_REC_START);
 						return;
 					}
 
-					// Lame init
-					SimpleLame.init(broadcastConfig.getAudioSampleRate(),
-							broadcastConfig.getAudioChannel(), broadcastConfig.getAudioSampleRate(),
-							broadcastConfig.getAudioBrate(), broadcastConfig.getAudioMp3EncodeQuality());
-					Log.d(C.TAG,
-							"SimpleLame is initialized. (SampleRate="
-									+ String.valueOf(broadcastConfig
-											.getAudioSampleRate())
-									+ ", Channel="
-									+ String.valueOf(broadcastConfig
-											.getAudioChannel())
-									+ ", BitRate="
-									+ String.valueOf(broadcastConfig
-											.getAudioBrate())
-									+ ", Quality="
-									+ String.valueOf(broadcastConfig
-											.getAudioMp3EncodeQuality()) + ")");
+					mRecStartTime = System.currentTimeMillis(); // 録音を開始した時刻を記憶する
 
-					// 録音を開始してから送信まで指定された秒数を待つ
-					try {
-						waitFromRecStartToSendData();
-					} catch (InterruptedException e) {
-						mIsWorking = false; // 動作中フラグを下げる
-						notifyRecStateChangedHandle(MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA);
-						return;
-					}
+					// 録音が開始した
+					notifyRecStateChangedHandle(MSG_REC_STARTED);
 
-					PrintWriter pr = null;
-					InputStreamReader in = null;
-					BufferedReader br = null;
-
-					try {
-						// ヘッダ送信
-						try {
-							pr = new PrintWriter(new OutputStreamWriter(
-									sockOut, "Shift_JIS"), true);
-							String headerStr = "SOURCE "
-									+ broadcastConfig.getChannelMount()
-									+ " ICE/1.0\r\n";
-							headerStr += "Content-Type: audio/mpeg\r\n";
-							headerStr += sUserAgent + "\r\n";
-							headerStr += "Authorization: Basic c291cmNlOmxhZGlv\r\n";
-							headerStr += "ice-name: "
-									+ broadcastConfig.getChannelTitle()
-									+ "\r\n";
-							headerStr += "ice-genre: "
-									+ broadcastConfig.getChannelGenre()
-									+ "\r\n";
-							headerStr += "ice-description: "
-									+ broadcastConfig.getChannelDescription()
-									+ "\r\n";
-							headerStr += "ice-url: "
-									+ broadcastConfig.getChannelUrl() + "\r\n";
-							headerStr += "ice-bitrate: "
-									+ String.valueOf(broadcastConfig
-											.getAudioBrate()) + "\r\n";
-							headerStr += "ice-public: 0\r\n";
-							headerStr += "ice-audio-info:ice-samplerate="
-									+ String.valueOf(broadcastConfig
-											.getAudioSampleRate())
-									+ ";ice-bitrate="
-									+ String.valueOf(broadcastConfig
-											.getAudioBrate())
-									+ ";ice-channels="
-									+ String.valueOf(broadcastConfig
-											.getAudioChannel()) + "\r\n";
-							headerStr += "x-ladio-info:charset=sjis;dj="
-									+ broadcastConfig.getChannelDjName()
-									+ "\r\n";
-							headerStr += "\r\n"; // ヘッダの終了は空行
-							pr.println(headerStr);
-							pr.flush();
-						} catch (UnsupportedEncodingException e) {
-							Log.w(C.TAG,
-									"UnsupportedEncodingException occurred when send header.",
-									e);
+					int readSize = 0;
+					while (mIsWorking) {
+						readSize = audioRecord
+								.read(recBuffer, 0, recBufferSize);
+						if (readSize < 0) {
 							mIsWorking = false; // 動作中フラグを下げる
-							// ヘッダの送信に失敗した
-							notifyRecStateChangedHandle(MSG_ERROR_SEND_HEADER_DATA);
+							// 録音ができない
+							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_RECORD);
 							return;
 						}
-
-						try {
-							in = new InputStreamReader(sockIn);
-							br = new BufferedReader(in);
-							String responseStr = br.readLine();
-							// 接続に成功
-							if (responseStr.equals("HTTP/1.0 200 OK")) {
-								Log.i(C.TAG, "Connected to "
-										+ socket.getInetAddress()
-												.getHostAddress() + ":"
-										+ socket.getPort() + ".");
-							}
-							// 認証失敗
-							else if (responseStr
-									.equals("HTTP/1.0 401 Authentication Required")) {
-								Log.w(C.TAG, "Received error.(" + responseStr
-										+ ")");
-								mIsWorking = false; // 動作中フラグを下げる
-								// 認証失敗
-								notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED);
-								return;
-							}
-							// 同名のマウントが使用中
-							else if (responseStr
-									.equals("HTTP/1.0 403 Mountpoint in use")) {
-								Log.w(C.TAG, "Received error.(" + responseStr
-										+ ")");
-								mIsWorking = false; // 動作中フラグを下げる
-								// 同名のマウントが使用中
-								notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE);
-								return;
-							}
-							// マウント名前が長すぎるか短すぎる
-							else if (responseStr
-									.equals("HTTP/1.0 403 Mountpoint too long")) {
-								Log.w(C.TAG, "Received error.(" + responseStr
-										+ ")");
-								mIsWorking = false; // 動作中フラグを下げる
-								// ヘッダのレスポンス受信に失敗した
-								notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG);
-								return;
-							}
-							// サポート外のストリーム
-							else if (responseStr
-									.equals("HTTP/1.0 403 Content-type not supported")) {
-								Log.w(C.TAG, "Received error.(" + responseStr
-										+ ")");
-								mIsWorking = false; // 動作中フラグを下げる
-								// ヘッダのレスポンス受信に失敗した
-								notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED);
-								return;
-							}
-							// 混んでいて接続できない
-							else if (responseStr
-									.equals("HTTP/1.0 403 too many sources connected")) {
-								Log.w(C.TAG, "Received error.(" + responseStr
-										+ ")");
-								mIsWorking = false; // 動作中フラグを下げる
-								// ヘッダのレスポンス受信に失敗した
-								notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED);
-								return;
-							}
-							// 未知のレスポンスを受信した
-							else {
-								Log.w(C.TAG, "Received unknown error.("
-										+ responseStr + ")");
-								mIsWorking = false; // 動作中フラグを下げる
-								// 未知のレスポンスを受信した
-								notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR);
-								return;
-							}
-						} catch (IOException e) {
-							Log.w(C.TAG,
-									"IOException occurred when header response receved.",
-									e);
-							mIsWorking = false; // 動作中フラグを下げる
-							// ヘッダのレスポンス受信に失敗した
-							notifyRecStateChangedHandle(MSG_ERROR_RECV_HEADER_RESPONSE);
-							return;
+						// データが読み込めなかった場合は何もしない
+						else if (readSize == 0) {
+							;
 						}
-
-						// 読み込みバッファサイズ。指定の秒数分だけ確保する。
-						final int readBufferSize = broadcastConfig.getAudioSampleRate()
-								* broadcastConfig.getAudioChannel() * 2
-								* C.ENCODE_PCM_BUFFER_SEC;
-						// 読み込みバッファ
-						short[] readBuffer = new short[readBufferSize];
-						Log.d(C.TAG,
-								"Read buffersize is "
-										+ String.valueOf(readBufferSize)
-										+ " bytes.");
-						// MP3バッファサイズ
-						final int mp3BufferSize = (int) (7200 + (readBufferSize * 1.25));
-						// MP3バッファ
-						byte[] mp3buffer = new byte[mp3BufferSize];
-						Log.d(C.TAG,
-								"Mp3 encode buffersize is "
-										+ String.valueOf(mp3BufferSize)
-										+ " bytes.");
-
-						synchronized (mBroadcastingInfoLock) {
-							mBroadcastingInfo = new BroadcastInfo(
-									broadcastConfig, broadcastServer
-											.getServerName().getName(),
-									broadcastServer.getServerName().getPort());
-						}
-						
-						// 録音開始と接続開始がそろっていたら MSG_STARTED を送信する
-						synchronized (mSendMsgStartStopLock) {
-							if (mIsRecStarted == true) {
-								// 録音とデータ送信が開始した
-								notifyRecStateChangedHandle(MSG_STARTED);
-							}
-							mIsConnected = true;
-						}
-
-						// 読み込みサイズ
-						int readSize = 0;
-						// エンコード後のバイトサイズ
-						int encResult = 0;
-
-						while (mIsWorking) {
-							readSize = 0;
-							while (mIsWorking) {
-								synchronized (pcmBufferLock) {
-									final int availableSize = pcmBuffer
-											.getAvailable();
-									if (availableSize != 0) {
-										readSize = Math.min(availableSize,
-												readBufferSize);
-										readSize = pcmBuffer.get(readBuffer, 0,
-												readSize);
-									} else {
-										if (C.WAIT_TO_WROTE_PCM_BUFFER) {
-											try {
-												if (C.LOCAL_LOG) {
-													Log.v(C.TAG,
-															"Wait to read PCM buffer.");
-												}
-												pcmBufferLock.wait();
-											} catch (InterruptedException e) {
-												Log.w(C.TAG,
-														"Interrupted wait to writing PCM bufffer.",
-														e);
-												mIsWorking = false; // 動作中フラグを下げる
-												// エンコードに失敗した
-												notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-												return;
+						// データが入っている場合
+						else {
+							try {
+								int availableDataSize = 0;
+								synchronized (mPcmBufferLock) {
+									// 音声のボリュームを調整する
+									if (isVolumeRateEnable() == true) {
+										int vi;
+										short vs;
+										for (int i = 0; i < readSize; ++i) {
+											vi = (int) (recBuffer[i] * mVolumeRateFloat);
+											if (vi > Short.MAX_VALUE) {
+												vs = Short.MAX_VALUE;
+											} else if (vi < Short.MIN_VALUE) {
+												vs = Short.MIN_VALUE;
+											} else {
+												vs = (short) vi;
 											}
+											recBuffer[i] = vs;
+										}
+									}
+
+									try {
+										// バッファに書き込む
+										mPcmBuffer.put(recBuffer, 0, readSize);
+										availableDataSize = mPcmBuffer
+												.getAvailable();
+									} finally {
+										mPcmBufferLock.notifyAll();
+										if (C.LOCAL_LOG) {
+											Log.v(C.TAG,
+													"Notify to write PCM buffer.");
 										}
 									}
 								}
-								if (readSize != 0) {
-									if (C.LOCAL_LOG) {
-										Log.v(C.TAG, "Read PCM buffer("
-												+ String.valueOf(readSize)
-												+ " bytes).");
-									}
-									break;
-								}
-							}
-
-							encResult = 0;
-							if (readSize != 0) {
-								switch (broadcastConfig.getAudioChannel()) {
-								case 1: // モノラルの場合
-									encResult = SimpleLame.encode(readBuffer,
-											readBuffer, readSize, mp3buffer);
-									break;
-								case 2: // ステレオの場合
-									encResult = SimpleLame
-											.encodeBufferInterleaved(
-													readBuffer, readSize / 2,
-													mp3buffer);
-									break;
-								default: // ここに到達することはあり得ないはずだが一応エラーとする。
-									Log.w(C.TAG,
-											"Failed LAME encode. PCM channels unknown.");
-									mIsWorking = false; // 動作中フラグを下げる
-									// エンコードに失敗した
-									notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-									return;
-								}
-								if (encResult < 0) {
-									Log.w(C.TAG, "Failed LAME encode(error="
-											+ encResult + ").");
-									mIsWorking = false; // 動作中フラグを下げる
-									// エンコードに失敗した
-									notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-									return;
-								}
-							}
-							if (encResult != 0) {
 								if (C.LOCAL_LOG) {
 									Log.v(C.TAG,
-											"Encoded "
+											"Wrote PCM buffer("
 													+ String.valueOf(readSize)
-													+ " bytes PCM to "
-													+ String.valueOf(encResult)
-													+ " bytes MP3.");
+													+ " bytes). Available buffersize is "
+													+ String.valueOf(availableDataSize)
+													+ " bytes.");
 								}
+							} catch (BufferOverflowException e) {
+								Log.w(C.TAG,
+										"MP3 encoding is slow, it seems to have PCM buffer overflowed.");
+								mIsWorking = false; // 動作中フラグを下げる
+								// 録音に対してエンコードが遅いなどの理由でバッファオーバーフローした
+								notifyRecStateChangedHandle(MSG_ERROR_PCM_BUFFER_OVERFLOW);
+								return;
+							}
+						}
+					}
+				} finally {
+					audioRecord.stop(); // 録音を停止する
+					audioRecord.release();
+					mRecStartTime = -1;
+				}
+			} finally {
+				Log.d(C.TAG, "Finish Record thread.");
+			}
+		}
+	}
+
+	/**
+	 * エンコードスレッド
+	 */
+	private  class EncodeThread extends Thread {
+
+		/**
+		 * 配信設定
+		 */
+		private BroadcastConfig mBroadcastConfig;
+		
+		/**
+		 * コンストラクタ
+		 * 
+		 * @param broadcastConfig
+		 *            配信設定
+		 */
+		public EncodeThread(final BroadcastConfig broadcastConfig)
+		{
+			mBroadcastConfig = broadcastConfig;
+		}
+
+		@Override
+		public void run() {
+			Log.d(C.TAG, "Start Encode thread.");
+
+			try {
+				// Lame init
+				SimpleLame.init(mBroadcastConfig.getAudioSampleRate(),
+						mBroadcastConfig.getAudioChannel(),
+						mBroadcastConfig.getAudioSampleRate(),
+						mBroadcastConfig.getAudioBrate(),
+						mBroadcastConfig.getAudioMp3EncodeQuality());
+				Log.d(C.TAG,
+						"SimpleLame is initialized. (SampleRate="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioSampleRate())
+								+ ", Channel="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioChannel())
+								+ ", BitRate="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioBrate())
+								+ ", Quality="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioMp3EncodeQuality()) + ")");
+
+				// 読み込みバッファサイズ。指定の秒数分だけ確保する。
+				final int readBufferSize = (mBroadcastConfig
+						.getAudioSampleRate()
+						* mBroadcastConfig.getAudioChannel() * 2 * C.ENCODE_PCM_BUFFER_SEC) + 2;
+				// 読み込みバッファ
+				short[] readBuffer = new short[readBufferSize];
+				Log.d(C.TAG,
+						"Read buffersize is " + String.valueOf(readBufferSize)
+								+ " bytes.");
+
+				// MP3バッファサイズ
+				final int mp3BufferSize = (int) (7200 + (readBufferSize * 1.25));
+				// MP3バッファ
+				byte[] mp3buffer = new byte[mp3BufferSize];
+				Log.d(C.TAG,
+						"Temporary MP3 encode buffersize is "
+								+ String.valueOf(mp3BufferSize) + " bytes.");
+
+				// 読み込みサイズ
+				int readSize = 0;
+				// エンコード後のバイトサイズ
+				int encResult = 0;
+
+				// エンコードが開始した
+				notifyRecStateChangedHandle(MSG_ENCODE_STARTED);
+
+				while (mIsWorking) {
+					readSize = 0;
+					while (mIsWorking) {
+						synchronized (mPcmBufferLock) {
+							final int availableSize = mPcmBuffer.getAvailable();
+							if (availableSize != 0) {
+								readSize = Math.min(availableSize,
+										readBufferSize);
+								readSize = mPcmBuffer.get(readBuffer, 0,
+										readSize);
+							} else {
 								try {
-									sockOut.write(mp3buffer, 0, encResult);
 									if (C.LOCAL_LOG) {
 										Log.v(C.TAG,
-												"Sent "
-														+ String.valueOf(encResult)
-														+ " bytes data.");
+												"Wait to read PCM buffer.");
 									}
-								} catch (IOException e) {
+
+									mPcmBufferLock.wait();
+								} catch (InterruptedException e) {
 									Log.w(C.TAG,
-											"IOException occurred when send stream.",
+											"Interrupted wait to writing PCM bufffer.",
+											e);
+									mIsWorking = false; // 動作中フラグを下げる
+									// エンコードに失敗した
+									notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
+									return;
+								}
+							}
+						}
+						if (readSize != 0) {
+							if (C.LOCAL_LOG) {
+								Log.v(C.TAG,
+										"Read PCM buffer("
+												+ String.valueOf(readSize)
+												+ " bytes).");
+							}
+							break;
+						}
+					}
+
+					encResult = 0;
+					if (readSize != 0) {
+						switch (mBroadcastConfig.getAudioChannel()) {
+						case 1: // モノラルの場合
+							encResult = SimpleLame.encode(readBuffer,
+									readBuffer, readSize, mp3buffer);
+							break;
+						case 2: // ステレオの場合
+							encResult = SimpleLame.encodeBufferInterleaved(
+									readBuffer, readSize / 2, mp3buffer);
+							break;
+						default: // ここに到達することはあり得ないはずだが一応エラーとする。
+							Log.w(C.TAG,
+									"Failed LAME encode. PCM channels unknown.");
+							mIsWorking = false; // 動作中フラグを下げる
+							// エンコードに失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
+							return;
+						}
+						if (encResult < 0) {
+							Log.w(C.TAG, "Failed LAME encode(error="
+									+ encResult + ").");
+							mIsWorking = false; // 動作中フラグを下げる
+							// エンコードに失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
+							return;
+						}
+					}
+					if (encResult != 0) {
+						if (C.LOCAL_LOG) {
+							Log.v(C.TAG,
+									"Encoded " + String.valueOf(readSize)
+											+ " bytes PCM to "
+											+ String.valueOf(encResult)
+											+ " bytes MP3.");
+						}
+						try {
+							int availableDataSize = 0;
+							synchronized (mMp3BufferLock) {
+								try {
+									// バッファに書き込む
+									mMp3Buffer.put(mp3buffer, 0, encResult);
+									availableDataSize = mMp3Buffer
+											.getAvailable();
+								} finally {
+									mMp3BufferLock.notifyAll();
+									if (C.LOCAL_LOG) {
+										Log.v(C.TAG,
+												"Notify to write MP3 buffer.");
+									}
+								}
+							}
+							if (C.LOCAL_LOG) {
+								Log.v(C.TAG,
+										"Wrote MP3 buffer("
+												+ String.valueOf(encResult)
+												+ " bytes). Available buffersize is "
+												+ String.valueOf(availableDataSize)
+												+ " bytes.");
+							}
+						} catch (BufferOverflowException e) {
+							Log.w(C.TAG, "MP3 buffer overflowed.");
+							mIsWorking = false; // 動作中フラグを下げる
+							// エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
+							notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
+							return;
+						}
+					}
+				}
+
+				int flushResult = SimpleLame.flush(mp3buffer);
+				if (flushResult < 0) {
+					Log.w(C.TAG, "Failed LAME flush(error=" + flushResult
+							+ ").");
+					mIsWorking = false; // 動作中フラグを下げる
+					// エンコードに失敗した
+					notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
+					return;
+				}
+				if (flushResult != 0) {
+					if (C.LOCAL_LOG) {
+						Log.v(C.TAG,
+								"Encoded remain PCM to "
+										+ String.valueOf(flushResult)
+										+ " bytes MP3.");
+					}
+					try {
+						int availableDataSize = 0;
+						synchronized (mMp3BufferLock) {
+							try {
+								// バッファに書き込む
+								mMp3Buffer.put(mp3buffer, 0, flushResult);
+								availableDataSize = mMp3Buffer.getAvailable();
+							} finally {
+								mMp3BufferLock.notifyAll();
+								if (C.LOCAL_LOG) {
+									Log.v(C.TAG, "Notify to write MP3 buffer.");
+								}
+							}
+						}
+						if (C.LOCAL_LOG) {
+							Log.v(C.TAG,
+									"Wrote MP3 buffer("
+											+ String.valueOf(flushResult)
+											+ " bytes). Available buffersize is "
+											+ String.valueOf(availableDataSize)
+											+ " bytes.");
+						}
+					} catch (BufferOverflowException e) {
+						Log.w(C.TAG, "MP3 buffer overflowed.");
+						mIsWorking = false; // 動作中フラグを下げる
+						// エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
+						notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
+						return;
+					}
+				}
+			} finally {
+				SimpleLame.close();
+				Log.d(C.TAG, "SimpleLame is closed.");
+
+				Log.d(C.TAG, "Finish Encode thread.");
+			}
+		}
+	}
+
+	/**
+	 * 送信スレッド
+	 */
+	private class SendDataThread extends Thread {
+
+		/**
+		 * 配信設定
+		 */
+		private BroadcastConfig mBroadcastConfig;
+		
+		/**
+		 * コンストラクタ
+		 * 
+		 * @param broadcastConfig
+		 *            配信設定
+		 */
+		public SendDataThread(final BroadcastConfig broadcastConfig)
+		{
+			mBroadcastConfig = broadcastConfig;
+		}
+
+		@Override
+		public void run() {
+			Log.d(C.TAG, "Start Send data thread.");
+
+			try {
+				// ねとらじの接続先サーバ
+				Server broadcastServer = null;
+
+				// 接続先のサーバを決める
+				{
+					// 配信サーバ情報リストを取得する
+					ServersInfo serversInfo = new ServersInfo();
+					try {
+						serversInfo.fetchServerInfo();
+					} catch (IOException e) {
+						Log.w(C.TAG,
+								"IOException occurred when fetch netladio server information.",
+								e);
+						mIsWorking = false; // 動作中フラグを下げる
+						notifyRecStateChangedHandle(MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST);
+						return;
+					}
+					
+					// 配信サーバを設定していない場合はもっとも空いているサーバを取得する
+					if (mBroadcastConfig.getChannelServer() == null
+							|| mBroadcastConfig.getChannelServer().length() == 0) {
+						broadcastServer = serversInfo.getVacantServer();
+					}
+					// 配信サーバを設定している場合
+					else {
+						broadcastServer = serversInfo.getServer(mBroadcastConfig.getChannelServer());
+					}
+
+					// 何らかの理由で配信サーバが決まらなかった場合はエラーで終了
+					if (broadcastServer == null) {
+						Log.w(C.TAG, "Not found the broadcast server.");
+						mIsWorking = false; // 動作中フラグを下げる
+						notifyRecStateChangedHandle(MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER);
+						return;
+					}
+				}
+
+				Socket socket = null;
+				InputStream sockIn = null;
+				OutputStream sockOut = null;
+				try {
+					socket = new Socket(broadcastServer.getServerName()
+							.getName(), broadcastServer.getServerName()
+							.getPort());
+					sockIn = socket.getInputStream();
+					sockOut = socket.getOutputStream();
+				} catch (UnknownHostException e) {
+					Log.w(C.TAG,
+							"UnknownHostException occurred when create socket.",
+							e);
+					mIsWorking = false; // 動作中フラグを下げる
+					notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+					return;
+				} catch (IOException e) {
+					Log.w(C.TAG,
+							"IOException occurred when create socket.", e);
+					mIsWorking = false; // 動作中フラグを下げる
+					notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+					return;
+				}
+
+				// 録音を開始してから送信まで指定された秒数を待つ
+				try {
+					waitFromRecStartToSendData();
+				} catch (InterruptedException e) {
+					mIsWorking = false; // 動作中フラグを下げる
+					notifyRecStateChangedHandle(MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA);
+					return;
+				}
+
+				PrintWriter pr = null;
+				InputStreamReader in = null;
+				BufferedReader br = null;
+
+				try {
+					// ヘッダ送信
+					try {
+						pr = new PrintWriter(new OutputStreamWriter(
+								sockOut, "Shift_JIS"), true);
+						String headerStr = "SOURCE "
+								+ mBroadcastConfig.getChannelMount()
+								+ " ICE/1.0\r\n";
+						headerStr += "Content-Type: audio/mpeg\r\n";
+						headerStr += sUserAgent + "\r\n";
+						headerStr += "Authorization: Basic c291cmNlOmxhZGlv\r\n";
+						headerStr += "ice-name: "
+								+ mBroadcastConfig.getChannelTitle()
+								+ "\r\n";
+						headerStr += "ice-genre: "
+								+ mBroadcastConfig.getChannelGenre()
+								+ "\r\n";
+						headerStr += "ice-description: "
+								+ mBroadcastConfig.getChannelDescription()
+								+ "\r\n";
+						headerStr += "ice-url: "
+								+ mBroadcastConfig.getChannelUrl() + "\r\n";
+						headerStr += "ice-bitrate: "
+								+ String.valueOf(mBroadcastConfig
+										.getAudioBrate()) + "\r\n";
+						headerStr += "ice-public: 0\r\n";
+						headerStr += "ice-audio-info:ice-samplerate="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioSampleRate())
+								+ ";ice-bitrate="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioBrate())
+								+ ";ice-channels="
+								+ String.valueOf(mBroadcastConfig
+										.getAudioChannel()) + "\r\n";
+						headerStr += "x-ladio-info:charset=sjis;dj="
+								+ mBroadcastConfig.getChannelDjName()
+								+ "\r\n";
+						headerStr += "\r\n"; // ヘッダの終了は空行
+						pr.println(headerStr);
+						pr.flush();
+					} catch (UnsupportedEncodingException e) {
+						Log.w(C.TAG,
+								"UnsupportedEncodingException occurred when send header.",
+								e);
+						mIsWorking = false; // 動作中フラグを下げる
+						// ヘッダの送信に失敗した
+						notifyRecStateChangedHandle(MSG_ERROR_SEND_HEADER_DATA);
+						return;
+					}
+
+					try {
+						in = new InputStreamReader(sockIn);
+						br = new BufferedReader(in);
+						String responseStr = br.readLine();
+						// 接続に成功
+						if (responseStr.equals("HTTP/1.0 200 OK")) {
+							Log.i(C.TAG, "Connected to "
+									+ socket.getInetAddress()
+											.getHostAddress() + ":"
+									+ socket.getPort() + ".");
+						}
+						// 認証失敗
+						else if (responseStr
+								.equals("HTTP/1.0 401 Authentication Required")) {
+							Log.w(C.TAG, "Received error.(" + responseStr
+									+ ")");
+							mIsWorking = false; // 動作中フラグを下げる
+							// 認証失敗
+							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED);
+							return;
+						}
+						// 同名のマウントが使用中
+						else if (responseStr
+								.equals("HTTP/1.0 403 Mountpoint in use")) {
+							Log.w(C.TAG, "Received error.(" + responseStr
+									+ ")");
+							mIsWorking = false; // 動作中フラグを下げる
+							// 同名のマウントが使用中
+							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE);
+							return;
+						}
+						// マウント名前が長すぎるか短すぎる
+						else if (responseStr
+								.equals("HTTP/1.0 403 Mountpoint too long")) {
+							Log.w(C.TAG, "Received error.(" + responseStr
+									+ ")");
+							mIsWorking = false; // 動作中フラグを下げる
+							// ヘッダのレスポンス受信に失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG);
+							return;
+						}
+						// サポート外のストリーム
+						else if (responseStr
+								.equals("HTTP/1.0 403 Content-type not supported")) {
+							Log.w(C.TAG, "Received error.(" + responseStr
+									+ ")");
+							mIsWorking = false; // 動作中フラグを下げる
+							// ヘッダのレスポンス受信に失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED);
+							return;
+						}
+						// 混んでいて接続できない
+						else if (responseStr
+								.equals("HTTP/1.0 403 too many sources connected")) {
+							Log.w(C.TAG, "Received error.(" + responseStr
+									+ ")");
+							mIsWorking = false; // 動作中フラグを下げる
+							// ヘッダのレスポンス受信に失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED);
+							return;
+						}
+						// 未知のレスポンスを受信した
+						else {
+							Log.w(C.TAG, "Received unknown error.("
+									+ responseStr + ")");
+							mIsWorking = false; // 動作中フラグを下げる
+							// 未知のレスポンスを受信した
+							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR);
+							return;
+						}
+					} catch (IOException e) {
+						Log.w(C.TAG,
+								"IOException occurred when header response receved.",
+								e);
+						mIsWorking = false; // 動作中フラグを下げる
+						// ヘッダのレスポンス受信に失敗した
+						notifyRecStateChangedHandle(MSG_ERROR_RECV_HEADER_RESPONSE);
+						return;
+					}
+
+					synchronized (mBroadcastingInfoLock) {
+						mBroadcastingInfo = new BroadcastInfo(
+								mBroadcastConfig, broadcastServer
+										.getServerName().getName(),
+								broadcastServer.getServerName().getPort());
+					}
+					
+					// ストリーム配信開始
+					notifyRecStateChangedHandle(MSG_SEND_STREAM_STARTED);
+					
+					// 読み込みサイズ
+					int readSize = 0;
+					// 読み込みバッファ
+					byte[] readBuffer = new byte[16 * 1024];
+
+					while (mIsWorking) {
+						synchronized (mMp3BufferLock) {
+							final int availableSize = mMp3Buffer.getAvailable();
+							if (availableSize != 0) {
+								readSize = Math.min(availableSize,
+										readBuffer.length);
+								readSize = mMp3Buffer.get(readBuffer, 0,
+										readSize);
+							} else {
+								try {
+									if (C.LOCAL_LOG) {
+										Log.v(C.TAG,
+												"Wait to read MP3 buffer.");
+									}
+
+									mMp3BufferLock.wait();
+								} catch (InterruptedException e) {
+									Log.w(C.TAG,
+											"Interrupted wait to writing MP3 bufffer.",
 											e);
 									mIsWorking = false; // 動作中フラグを下げる
 									// データの送信に失敗した
@@ -878,122 +1026,95 @@ public class VoiceSender {
 								}
 							}
 						}
-
-						int flushResult = SimpleLame.flush(mp3buffer);
-						if (flushResult < 0) {
-							Log.w(C.TAG, "Failed LAME flush(error="
-									+ flushResult + ").");
-							mIsWorking = false; // 動作中フラグを下げる
-							// エンコードに失敗した
-							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-							return;
-						}
-						if (flushResult != 0) {
+						try {
+							sockOut.write(readBuffer, 0, readSize);
 							if (C.LOCAL_LOG) {
 								Log.v(C.TAG,
-										"Encoded remain PCM to "
-												+ String.valueOf(flushResult)
-												+ " bytes MP3.");
+										"Sent "
+												+ String.valueOf(readSize)
+												+ " bytes data.");
 							}
-							try {
-								sockOut.write(mp3buffer, 0, flushResult);
-								if (C.LOCAL_LOG) {
-									Log.v(C.TAG,
-											"Sent "
-													+ String.valueOf(flushResult)
-													+ " bytes data.");
-								}
-							} catch (IOException e) {
-								Log.w(C.TAG,
-										"IOException occurred when send stream.",
-										e);
-								mIsWorking = false; // 動作中フラグを下げる
-								// データの送信に失敗した
-								notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
-								return;
-							}
-						}
-					} finally {
-						SimpleLame.close();
-						Log.d(C.TAG, "SimpleLame is closed.");
-						
-						synchronized (mBroadcastingInfoLock) {
-							mBroadcastingInfo = null; // 配信情報を空にする
-						}
-
-						if (br != null) {
-							try {
-								br.close();
-							} catch (IOException e) {
-								Log.w(C.TAG,
-										"IOException occurred when BufferedReader close.",
-										e);
-							}
-							br = null;
-						}
-						if (in != null) {
-							try {
-								in.close();
-							} catch (IOException e) {
-								Log.w(C.TAG,
-										"IOException occurred when InputStreamReader close.",
-										e);
-							}
-							in = null;
-						}
-						if (pr != null) {
-							pr.close();
-							pr = null;
-						}
-						if (sockOut != null) {
-							try {
-								sockOut.close();
-							} catch (IOException e) {
-								Log.w(C.TAG,
-										"IOException occurred when close socket output stream.",
-										e);
-							}
-							sockOut = null;
-						}
-						if (sockIn != null) {
-							try {
-								sockIn.close();
-							} catch (IOException e) {
-								Log.w(C.TAG,
-										"IOException occurred when close socket input stream.",
-										e);
-							}
-							sockIn = null;
-						}
-						if (socket != null) {
-							try {
-								socket.close();
-								Log.i(C.TAG, "Disconnected to "
-										+ socket.getInetAddress()
-												.getHostAddress() + ":"
-										+ socket.getPort() + ".");
-							} catch (IOException e) {
-								Log.w(C.TAG,
-										"IOException occurred when close socket.",
-										e);
-							}
-							socket = null;
+						} catch (IOException e) {
+							Log.w(C.TAG,
+									"IOException occurred when send stream.",
+									e);
+							mIsWorking = false; // 動作中フラグを下げる
+							// データの送信に失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+							return;
 						}
 					}
-
-					// 録音終了と接続終了がそろっていたら MSG_STOPPED を送信する
-					synchronized (mSendMsgStartStopLock) {
-						if (mIsRecStarted == false) {
-							// 録音が終了した
-							notifyRecStateChangedHandle(MSG_STOPPED);
-						}
-						mIsConnected = false;
-					}
+					
+					// ストリーム配信正常終了
+					notifyRecStateChangedHandle(MSG_SEND_STREAM_ENDED);
 				} finally {
-					Log.d(C.TAG, "Finish Encode and Send data thread.");
+					synchronized (mBroadcastingInfoLock) {
+						mBroadcastingInfo = null; // 配信情報を空にする
+					}
+
+					if (br != null) {
+						try {
+							br.close();
+						} catch (IOException e) {
+							Log.w(C.TAG,
+									"IOException occurred when BufferedReader close.",
+									e);
+						}
+						br = null;
+					}
+					if (in != null) {
+						try {
+							in.close();
+						} catch (IOException e) {
+							Log.w(C.TAG,
+									"IOException occurred when InputStreamReader close.",
+									e);
+						}
+						in = null;
+					}
+					if (pr != null) {
+						pr.close();
+						pr = null;
+					}
+					if (sockOut != null) {
+						try {
+							sockOut.close();
+						} catch (IOException e) {
+							Log.w(C.TAG,
+									"IOException occurred when close socket output stream.",
+									e);
+						}
+						sockOut = null;
+					}
+					if (sockIn != null) {
+						try {
+							sockIn.close();
+						} catch (IOException e) {
+							Log.w(C.TAG,
+									"IOException occurred when close socket input stream.",
+									e);
+						}
+						sockIn = null;
+					}
+					if (socket != null) {
+						try {
+							socket.close();
+							Log.i(C.TAG, "Disconnected to "
+									+ socket.getInetAddress()
+											.getHostAddress() + ":"
+									+ socket.getPort() + ".");
+						} catch (IOException e) {
+							Log.w(C.TAG,
+									"IOException occurred when close socket.",
+									e);
+						}
+						socket = null;
+					}
 				}
+			} finally {
+				Log.d(C.TAG, "Finish Send data thread.");
 			}
-		}.start();
+		}
 	}
 
 	/**
@@ -1035,17 +1156,20 @@ public class VoiceSender {
 				// 待つ時間のうちすでに録音開始してからここに到達するまでの時間は、待ち時間から差し引く
 				final long waitTime = (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA * 1000)
 						- (System.currentTimeMillis() - mRecStartTime);
-				if (C.LOCAL_LOG) {
-					Log.v(C.TAG,
-							"Sleep "
-									+ String.valueOf(((float) waitTime) / 1000)
-									+ " sec.");
-				}
-				try {
-					Thread.sleep(waitTime);
-				} catch (InterruptedException e) {
-					Log.w(C.TAG, "Interrupted wait to rec margin.", e);
-					throw e;
+				if(waitTime > 10)
+				{
+					if (C.LOCAL_LOG) {
+						Log.v(C.TAG,
+								"Sleep "
+										+ String.valueOf(((float) waitTime) / 1000)
+										+ " sec.");
+					}
+					try {
+						Thread.sleep(waitTime);
+					} catch (InterruptedException e) {
+						Log.w(C.TAG, "Interrupted wait to rec margin.", e);
+						throw e;
+					}
 				}
 			}
 		}
@@ -1137,11 +1261,16 @@ public class VoiceSender {
 	 * @param handler
 	 *            動作の状態変化を通知するハンドラ
 	 * 
-	 * @see VoiceSender#MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST
-	 * @see VoiceSender#MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER
 	 * @see VoiceSender#MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS
 	 * @see VoiceSender#MSG_ERROR_REC_START
 	 * @see VoiceSender#MSG_REC_STARTED
+	 * @see VoiceSender#MSG_ERROR_AUDIO_RECORD
+	 * @see VoiceSender#MSG_ERROR_PCM_BUFFER_OVERFLOW
+	 * @see VoiceSender#MSG_ENCODE_STARTED
+	 * @see VoiceSender#MSG_ERROR_AUDIO_ENCODE
+	 * @see VoiceSender#MSG_ERROR_MP3_BUFFER_OVERFLOW
+	 * @see VoiceSender#MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST
+	 * @see VoiceSender#MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER
 	 * @see VoiceSender#MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER
 	 * @see VoiceSender#MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA
 	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED
@@ -1152,12 +1281,9 @@ public class VoiceSender {
 	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR
 	 * @see VoiceSender#MSG_ERROR_SEND_HEADER_DATA
 	 * @see VoiceSender#MSG_ERROR_RECV_HEADER_RESPONSE
-	 * @see VoiceSender#MSG_STARTED
-	 * @see VoiceSender#MSG_ERROR_AUDIO_RECORD
-	 * @see VoiceSender#MSG_ERROR_PCM_BUFFER_OVERFLOW
-	 * @see VoiceSender#MSG_ERROR_AUDIO_ENCODE
+	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
 	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
-	 * @see VoiceSender#MSG_STOPPED
+	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
 	 */
 	public final void addBroadcastStateChangedHandle(Handler handler) {
 		if (handler != null) {
