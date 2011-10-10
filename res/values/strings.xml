@@ -34,7 +34,7 @@
     <string name="audio_sample_rate">サンプリングレート</string>
     <string name="audio_sample_rate_summary">サンプリングレートを設定します。よく分からない場合は44100Hzを選択してください。</string>
     <string name="audio_mp3_encode_quality">エンコード品質</string>
-    <string name="audio_mp3_encode_quality_summary">音声のエンコード品質を設定します。品質を高くしすぎると配信中に中止することがあります。</string>
+    <string name="audio_mp3_encode_quality_summary">音声のエンコード品質を設定します。品質を高くしすぎると配信が停止することがあります。</string>
     <string name="audio_mp3_encode_quality_q0">最高品質</string>
     <string name="audio_mp3_encode_quality_q1">かなり高い</string>
     <string name="audio_mp3_encode_quality_q2">高い</string>
@@ -47,7 +47,7 @@
     <string name="audio_mp3_encode_quality_q9">かなり低い（かなり低速な端末向け）</string>
     <string name="anonymous_dj_name">名無しのDJ</string>
     <string name="anonymous_title">名無しの番組</string>
-    <string name="anonymous_description">-</string>
+    <string name="anonymous_description">Ladio Starで配信中</string>
     <string name="anonymous_genre">-</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
