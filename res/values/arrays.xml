@@ -64,7 +64,7 @@
 		<!-- <item>最高品質</item> -->
 		<!-- <item>かなり高い</item> -->
 		<!-- <item>高い</item> -->
-		<!-- <item>高め</item> -->
+		<item>高め</item>
 		<!-- <item>やや高め</item> -->
 		<item>並</item>
 		<!-- <item>やや低め</item> -->
@@ -76,7 +76,7 @@
 		<!-- <item>0</item> -->
 		<!-- <item>1</item> -->
 		<!-- <item>2</item> -->
-		<!-- <item>3</item> -->
+		<item>3</item>
 		<!-- <item>4</item> -->
 		<item>5</item>
 		<!-- <item>6</item> -->
