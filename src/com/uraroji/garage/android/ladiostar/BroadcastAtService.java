@@ -123,24 +123,22 @@ public class BroadcastAtService implements BroadcastInterface {
 			Log.v(C.TAG, "Release VoiceSender resouce.");
 		}
 
-		boolean isBroadcasted = isBroadcasting();
-
 		mContext.unbindService(mBroadcastServiceConn);
 		// 配信中で無い場合はサービスを止める
-		if (isBroadcasted == false) {
+		if (getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
 			mContext.stopService(new Intent(BroadcastServiceInterface.class
 					.getName()));
 		}
 	}
 
 	@Override
-	public boolean isBroadcasting() {
+	public int getBroadcastState() {
 		try {
-			return mBroadcastServiceInterface.isBroadcasting();
+			return mBroadcastServiceInterface.getBroadcastState();
 		} catch (RemoteException e) {
 			Log.w(C.TAG, "RemoteException(" + e.toString() + ")  occurred.");
-			// どうしようもないのでとりあえずfalseを返す
-			return false;
+			// どうしようもないのでとりあえずBROADCAST_STATE_STOPPEDを返す
+			return VoiceSender.BROADCAST_STATE_STOPPED;
 		}
 	}
 

@@ -83,7 +83,9 @@ public class BroadcastAtLocal implements BroadcastInterface {
 					 * 配信中でもbroadcastingInfoが取得できないこともある（配信開始直後）ので、
 					 * broadcastingInfoがnullであるかもチェックする。
 					 */
-					if (mVoiceSender.isBroadcasting() == false || broadcastingInfo == null) {
+					if ((mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING || mVoiceSender
+							.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED)
+							|| broadcastingInfo == null) {
 						// Notificationを消す
 						nm.cancel(C.NOTIFICATION_ID);
 					} else {
@@ -124,8 +126,8 @@ public class BroadcastAtLocal implements BroadcastInterface {
 	}
 
 	@Override
-	public boolean isBroadcasting() {
-		return mVoiceSender.isBroadcasting();
+	public int getBroadcastState() {
+		return mVoiceSender.getBroadcastState();
 	}
 
 	@Override

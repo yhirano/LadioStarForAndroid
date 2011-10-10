@@ -159,6 +159,8 @@ public class BroadcastService extends Service {
 							.show();
 					break;
 				case VoiceSender.MSG_SEND_STREAM_ENDED:
+				case VoiceSender.MSG_RECONNECT_STARTED:
+				case VoiceSender.MSG_STOP_WAIT_RECONNECT:
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what
@@ -209,7 +211,8 @@ public class BroadcastService extends Service {
 					 * 配信中でもbroadcastingInfoが取得できないこともある（配信開始直後）ので、
 					 * broadcastingInfoがnullであるかもチェックする。
 					 */
-					if (mVoiceSender.isBroadcasting() == false
+					if ((mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING || mVoiceSender
+							.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED)
 							|| broadcastingInfo == null) {
 						// Notificationを消す
 						nm.cancel(C.NOTIFICATION_ID);
@@ -301,8 +304,8 @@ public class BroadcastService extends Service {
 		}
 
 		@Override
-		public boolean isBroadcasting() throws RemoteException {
-			return mVoiceSender.isBroadcasting();
+		public int getBroadcastState() throws RemoteException {
+			return mVoiceSender.getBroadcastState();
 		}
 
 		@Override

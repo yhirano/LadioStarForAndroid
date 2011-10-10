@@ -59,11 +59,14 @@ public interface BroadcastInterface {
 	public void release();
 
 	/**
-	 * 配信中かを取得する
+	 * 配信状態取得すする
 	 * 
-	 * @return trueの場合は録音中、それ以外はfalse
+	 * @see VoiceSender#BROADCAST_STATE_STOPPED
+	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
+	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+	 * @see VoiceSender#BROADCAST_STATE_STOPPING
 	 */
-	public boolean isBroadcasting();
+	public int getBroadcastState();
 
 	/**
 	 * 配信情報を取得する
@@ -122,6 +125,8 @@ public interface BroadcastInterface {
 	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
 	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
 	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
+	 * @see VoiceSender#MSG_RECONNECT_STARTED
+	 * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
 	 */
 	public void addBroadcastStateChangedHandler(Handler handler);
 

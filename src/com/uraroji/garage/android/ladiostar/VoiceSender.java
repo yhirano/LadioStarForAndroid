@@ -227,6 +227,46 @@ public class VoiceSender {
 	public static final int MSG_SEND_STREAM_ENDED = 22;
 
 	/**
+	 * 再接続を開始した
+	 * 
+	 * 再接続設定が有効な場合に、接続が切れた後に再接続処理を開始したら発行する。
+	 */
+	public static final int MSG_RECONNECT_STARTED = 23;
+
+	/**
+	 * 再接続待ち中に再接続を停止した
+	 * 
+	 * 再接続待ち中にユーザーによる配信停止の場合に発行される。<br />
+	 * このメッセージが発行された直後に処理は終了する。
+	 */
+	public static final int MSG_STOP_WAIT_RECONNECT = 24;
+
+	/**
+	 * 動作していない
+	 */
+	public static final int BROADCAST_STATE_STOPPED = 0;
+	
+	/**
+	 * 接続中
+	 */
+	public static final int BROADCAST_STATE_CONNECTING = 1;
+	
+	/**
+	 * 配信中
+	 */
+	public static final int BROADCAST_STATE_BROADCASTING = 2;
+	
+	/**
+	 * 停止中
+	 */
+	public static final int BROADCAST_STATE_STOPPING = 4;
+
+	/**
+	 * 再接続までの待ち時間（ミリ秒）
+	 */
+	private static final long WAIT_RECONNECT_MSEC = 4000;
+	
+	/**
 	 * ねとらじサーバに通知するUserAgent
 	 */
 	private static String sUserAgent;
@@ -252,10 +292,20 @@ public class VoiceSender {
 	private final Object mMp3BufferLock = new Object();
 
 	/**
-	 * 動作中か
+	 * 配信状態
+	 * 
+	 * @see VoiceSender#BROADCAST_STATE_STOPPED
+	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
+	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+	 * @see VoiceSender#BROADCAST_STATE_STOPPING
 	 */
-	private volatile boolean mIsWorking = false;
-
+	public int mBroadcastState = BROADCAST_STATE_STOPPED;
+	
+	/**
+	 * 再接続するか
+	 */
+	private volatile boolean mIsRecoonect = true;
+	
 	/**
 	 * 音量
 	 * 
@@ -324,7 +374,7 @@ public class VoiceSender {
 		}
 		
 		// 既に動作中の場合は何もしない
-		if (mIsWorking) {
+		if (mBroadcastState != BROADCAST_STATE_STOPPED) {
 			return;
 		}
 
@@ -353,7 +403,7 @@ public class VoiceSender {
 		Log.d(C.TAG, "MP3 buffersize is " + String.valueOf(mMp3Buffer.size())
 				+ " bytes.");
 
-		mIsWorking = true; // 動作の開始フラグを立てる
+		mBroadcastState = BROADCAST_STATE_CONNECTING; // 動作の開始フラグを立てる
 
 		(new RecThread(broadcastConfig)).start();
 		(new EncodeThread(broadcastConfig)).start();
@@ -397,9 +447,8 @@ public class VoiceSender {
 						AudioFormat.ENCODING_PCM_16BIT);
 				// バッファサイズが取得できない。サンプリングレート等の設定を端末がサポートしていない可能性がある。
 				if (recBufferSizeMin < 0) {
-					mIsWorking = false; // 動作中フラグを下げる
-					notifyRecStateChangedHandle(MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS);
-					// エラー名を変える
+					mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+					notifyRecStateChangedHandle(MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS); // エラー名を変える
 					return;
 				}
 				/*
@@ -427,7 +476,7 @@ public class VoiceSender {
 						Log.w(C.TAG,
 								"IllegalStateException occurred when audio record start.",
 								e);
-						mIsWorking = false; // 動作中フラグを下げる
+						mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 						// 録音の開始に失敗した
 						notifyRecStateChangedHandle(MSG_ERROR_REC_START);
 						return;
@@ -439,11 +488,12 @@ public class VoiceSender {
 					notifyRecStateChangedHandle(MSG_REC_STARTED);
 
 					int readSize = 0;
-					while (mIsWorking) {
+					while (mBroadcastState == BROADCAST_STATE_CONNECTING
+							|| mBroadcastState == BROADCAST_STATE_BROADCASTING) {
 						readSize = audioRecord
 								.read(recBuffer, 0, recBufferSize);
 						if (readSize < 0) {
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// 録音ができない
 							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_RECORD);
 							return;
@@ -498,7 +548,7 @@ public class VoiceSender {
 							} catch (BufferOverflowException e) {
 								Log.w(C.TAG,
 										"MP3 encoding is slow, it seems to have PCM buffer overflowed.");
-								mIsWorking = false; // 動作中フラグを下げる
+								mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 								// 録音に対してエンコードが遅いなどの理由でバッファオーバーフローした
 								notifyRecStateChangedHandle(MSG_ERROR_PCM_BUFFER_OVERFLOW);
 								return;
@@ -588,9 +638,11 @@ public class VoiceSender {
 				// エンコードが開始した
 				notifyRecStateChangedHandle(MSG_ENCODE_STARTED);
 
-				while (mIsWorking) {
+				while (mBroadcastState == BROADCAST_STATE_CONNECTING
+						|| mBroadcastState == BROADCAST_STATE_BROADCASTING) {
 					readSize = 0;
-					while (mIsWorking) {
+					while (mBroadcastState == BROADCAST_STATE_CONNECTING
+							|| mBroadcastState == BROADCAST_STATE_BROADCASTING) {
 						synchronized (mPcmBufferLock) {
 							final int availableSize = mPcmBuffer.getAvailable();
 							if (availableSize != 0) {
@@ -610,7 +662,7 @@ public class VoiceSender {
 									Log.w(C.TAG,
 											"Interrupted wait to writing PCM bufffer.",
 											e);
-									mIsWorking = false; // 動作中フラグを下げる
+									mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 									// エンコードに失敗した
 									notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
 									return;
@@ -642,7 +694,7 @@ public class VoiceSender {
 						default: // ここに到達することはあり得ないはずだが一応エラーとする。
 							Log.w(C.TAG,
 									"Failed LAME encode. PCM channels unknown.");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// エンコードに失敗した
 							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
 							return;
@@ -650,7 +702,7 @@ public class VoiceSender {
 						if (encResult < 0) {
 							Log.w(C.TAG, "Failed LAME encode(error="
 									+ encResult + ").");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// エンコードに失敗した
 							notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
 							return;
@@ -669,7 +721,12 @@ public class VoiceSender {
 							synchronized (mMp3BufferLock) {
 								try {
 									// バッファに書き込む
-									mMp3Buffer.put(mp3buffer, 0, encResult);
+									mMp3Buffer
+											.put(mp3buffer,
+													0,
+													encResult,
+													(mBroadcastState == BROADCAST_STATE_CONNECTING) // 再接続中は古い音声データを上書きする
+											);
 									availableDataSize = mMp3Buffer
 											.getAvailable();
 								} finally {
@@ -690,7 +747,7 @@ public class VoiceSender {
 							}
 						} catch (BufferOverflowException e) {
 							Log.w(C.TAG, "MP3 buffer overflowed.");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
 							notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
 							return;
@@ -702,7 +759,7 @@ public class VoiceSender {
 				if (flushResult < 0) {
 					Log.w(C.TAG, "Failed LAME flush(error=" + flushResult
 							+ ").");
-					mIsWorking = false; // 動作中フラグを下げる
+					mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 					// エンコードに失敗した
 					notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
 					return;
@@ -719,7 +776,12 @@ public class VoiceSender {
 						synchronized (mMp3BufferLock) {
 							try {
 								// バッファに書き込む
-								mMp3Buffer.put(mp3buffer, 0, flushResult);
+								mMp3Buffer
+										.put(mp3buffer,
+												0,
+												flushResult,
+												(mBroadcastState == BROADCAST_STATE_CONNECTING)  // 再接続中は古い音声データを上書きする
+												);
 								availableDataSize = mMp3Buffer.getAvailable();
 							} finally {
 								mMp3BufferLock.notifyAll();
@@ -738,7 +800,7 @@ public class VoiceSender {
 						}
 					} catch (BufferOverflowException e) {
 						Log.w(C.TAG, "MP3 buffer overflowed.");
-						mIsWorking = false; // 動作中フラグを下げる
+						mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 						// エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
 						notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
 						return;
@@ -792,8 +854,17 @@ public class VoiceSender {
 						Log.w(C.TAG,
 								"IOException occurred when fetch netladio server information.",
 								e);
-						mIsWorking = false; // 動作中フラグを下げる
-						notifyRecStateChangedHandle(MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST);
+						if (mIsRecoonect) {
+							try {
+								reconnect(mBroadcastConfig);
+							} catch (InterruptedException e2) {
+								mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+								notifyRecStateChangedHandle(MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST);
+							}
+						} else {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							notifyRecStateChangedHandle(MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST);
+						}
 						return;
 					}
 					
@@ -810,8 +881,17 @@ public class VoiceSender {
 					// 何らかの理由で配信サーバが決まらなかった場合はエラーで終了
 					if (broadcastServer == null) {
 						Log.w(C.TAG, "Not found the broadcast server.");
-						mIsWorking = false; // 動作中フラグを下げる
-						notifyRecStateChangedHandle(MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER);
+						if (mIsRecoonect) {
+							try {
+								reconnect(mBroadcastConfig);
+							} catch (InterruptedException e2) {
+								mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+								notifyRecStateChangedHandle(MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER);
+							}
+						} else {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							notifyRecStateChangedHandle(MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER);
+						}
 						return;
 					}
 				}
@@ -829,14 +909,32 @@ public class VoiceSender {
 					Log.w(C.TAG,
 							"UnknownHostException occurred when create socket.",
 							e);
-					mIsWorking = false; // 動作中フラグを下げる
-					notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+					if (mIsRecoonect) {
+						try {
+							reconnect(mBroadcastConfig);
+						} catch (InterruptedException e2) {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+						}
+					} else {
+						mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+						notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+					}
 					return;
 				} catch (IOException e) {
 					Log.w(C.TAG,
 							"IOException occurred when create socket.", e);
-					mIsWorking = false; // 動作中フラグを下げる
-					notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+					if (mIsRecoonect) {
+						try {
+							reconnect(mBroadcastConfig);
+						} catch (InterruptedException e2) {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+						}
+					} else {
+						mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+						notifyRecStateChangedHandle(MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER);
+					}
 					return;
 				}
 
@@ -844,8 +942,17 @@ public class VoiceSender {
 				try {
 					waitFromRecStartToSendData();
 				} catch (InterruptedException e) {
-					mIsWorking = false; // 動作中フラグを下げる
-					notifyRecStateChangedHandle(MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA);
+					if (mIsRecoonect) {
+						try {
+							reconnect(mBroadcastConfig);
+						} catch (InterruptedException e2) {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							notifyRecStateChangedHandle(MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA);
+						}
+					} else {
+						mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+						notifyRecStateChangedHandle(MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA);
+					}
 					return;
 				}
 
@@ -898,9 +1005,19 @@ public class VoiceSender {
 						Log.w(C.TAG,
 								"UnsupportedEncodingException occurred when send header.",
 								e);
-						mIsWorking = false; // 動作中フラグを下げる
-						// ヘッダの送信に失敗した
-						notifyRecStateChangedHandle(MSG_ERROR_SEND_HEADER_DATA);
+						if (mIsRecoonect) {
+							try {
+								reconnect(mBroadcastConfig);
+							} catch (InterruptedException e2) {
+								mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+								// ヘッダの送信に失敗した
+								notifyRecStateChangedHandle(MSG_ERROR_SEND_HEADER_DATA);
+							}
+						} else {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							// ヘッダの送信に失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_SEND_HEADER_DATA);
+						}
 						return;
 					}
 
@@ -920,7 +1037,7 @@ public class VoiceSender {
 								.equals("HTTP/1.0 401 Authentication Required")) {
 							Log.w(C.TAG, "Received error.(" + responseStr
 									+ ")");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// 認証失敗
 							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED);
 							return;
@@ -930,7 +1047,7 @@ public class VoiceSender {
 								.equals("HTTP/1.0 403 Mountpoint in use")) {
 							Log.w(C.TAG, "Received error.(" + responseStr
 									+ ")");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// 同名のマウントが使用中
 							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE);
 							return;
@@ -940,7 +1057,7 @@ public class VoiceSender {
 								.equals("HTTP/1.0 403 Mountpoint too long")) {
 							Log.w(C.TAG, "Received error.(" + responseStr
 									+ ")");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// ヘッダのレスポンス受信に失敗した
 							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG);
 							return;
@@ -950,7 +1067,7 @@ public class VoiceSender {
 								.equals("HTTP/1.0 403 Content-type not supported")) {
 							Log.w(C.TAG, "Received error.(" + responseStr
 									+ ")");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// ヘッダのレスポンス受信に失敗した
 							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED);
 							return;
@@ -960,7 +1077,7 @@ public class VoiceSender {
 								.equals("HTTP/1.0 403 too many sources connected")) {
 							Log.w(C.TAG, "Received error.(" + responseStr
 									+ ")");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// ヘッダのレスポンス受信に失敗した
 							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED);
 							return;
@@ -969,7 +1086,7 @@ public class VoiceSender {
 						else {
 							Log.w(C.TAG, "Received unknown error.("
 									+ responseStr + ")");
-							mIsWorking = false; // 動作中フラグを下げる
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
 							// 未知のレスポンスを受信した
 							notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR);
 							return;
@@ -978,9 +1095,19 @@ public class VoiceSender {
 						Log.w(C.TAG,
 								"IOException occurred when header response receved.",
 								e);
-						mIsWorking = false; // 動作中フラグを下げる
-						// ヘッダのレスポンス受信に失敗した
-						notifyRecStateChangedHandle(MSG_ERROR_RECV_HEADER_RESPONSE);
+						if (mIsRecoonect) {
+							try {
+								reconnect(mBroadcastConfig);
+							} catch (InterruptedException e2) {
+								mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+								// ヘッダのレスポンス受信に失敗した
+								notifyRecStateChangedHandle(MSG_ERROR_RECV_HEADER_RESPONSE);
+							}
+						} else {
+							mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+							// ヘッダのレスポンス受信に失敗した
+							notifyRecStateChangedHandle(MSG_ERROR_RECV_HEADER_RESPONSE);
+						}
 						return;
 					}
 
@@ -991,6 +1118,8 @@ public class VoiceSender {
 								broadcastServer.getServerName().getPort());
 					}
 					
+					mBroadcastState = BROADCAST_STATE_BROADCASTING;
+
 					// ストリーム配信開始
 					notifyRecStateChangedHandle(MSG_SEND_STREAM_STARTED);
 					
@@ -999,7 +1128,7 @@ public class VoiceSender {
 					// 読み込みバッファ
 					byte[] readBuffer = new byte[16 * 1024];
 
-					while (mIsWorking) {
+					while (mBroadcastState == BROADCAST_STATE_BROADCASTING) {
 						synchronized (mMp3BufferLock) {
 							final int availableSize = mMp3Buffer.getAvailable();
 							if (availableSize != 0) {
@@ -1019,9 +1148,19 @@ public class VoiceSender {
 									Log.w(C.TAG,
 											"Interrupted wait to writing MP3 bufffer.",
 											e);
-									mIsWorking = false; // 動作中フラグを下げる
-									// データの送信に失敗した
-									notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+									if (mIsRecoonect) {
+										try {
+											reconnect(mBroadcastConfig);
+										} catch (InterruptedException e2) {
+											mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+											// データの送信に失敗した
+											notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+										}
+									} else {
+										mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+										// データの送信に失敗した
+										notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+									}
 									return;
 								}
 							}
@@ -1038,9 +1177,19 @@ public class VoiceSender {
 							Log.w(C.TAG,
 									"IOException occurred when send stream.",
 									e);
-							mIsWorking = false; // 動作中フラグを下げる
-							// データの送信に失敗した
-							notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+							if (mIsRecoonect) {
+								try {
+									reconnect(mBroadcastConfig);
+								} catch (InterruptedException e2) {
+									mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+									// データの送信に失敗した
+									notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+								}
+							} else {
+								mBroadcastState = BROADCAST_STATE_STOPPING; // 動作中フラグを下げる
+								// データの送信に失敗した
+								notifyRecStateChangedHandle(MSG_ERROR_SEND_STREAM_DATA);
+							}
 							return;
 						}
 					}
@@ -1112,6 +1261,10 @@ public class VoiceSender {
 					}
 				}
 			} finally {
+				if (mBroadcastState == BROADCAST_STATE_STOPPING) {
+					mBroadcastState = BROADCAST_STATE_STOPPED;
+				}
+
 				Log.d(C.TAG, "Finish Send data thread.");
 			}
 		}
@@ -1143,7 +1296,8 @@ public class VoiceSender {
 	private void waitFromRecStartToSendData() throws InterruptedException {
 		if (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA > 0) {
 			// 録音開始するまでポーリングで待つ
-			while (mIsWorking == true && mRecStartTime < 0) {
+			while ((mBroadcastState == BROADCAST_STATE_CONNECTING || mBroadcastState == BROADCAST_STATE_BROADCASTING)
+					&& mRecStartTime < 0) {
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
@@ -1152,7 +1306,8 @@ public class VoiceSender {
 				}
 			}
 			// 録音開始してから指定の秒数だけ待つ
-			if (mIsWorking == true && mRecStartTime >= 0) {
+			if ((mBroadcastState == BROADCAST_STATE_CONNECTING || mBroadcastState == BROADCAST_STATE_BROADCASTING)
+					&& mRecStartTime >= 0) {
 				// 待つ時間のうちすでに録音開始してからここに到達するまでの時間は、待ち時間から差し引く
 				final long waitTime = (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA * 1000)
 						- (System.currentTimeMillis() - mRecStartTime);
@@ -1176,41 +1331,67 @@ public class VoiceSender {
 	}
 	
 	/**
+	 * 再接続する
+	 * 
+	 * @param broadcastConfig
+	 *            接続設定
+	 */
+	private void reconnect(final BroadcastConfig broadcastConfig) throws InterruptedException {
+		final long waitTime = System.currentTimeMillis() + WAIT_RECONNECT_MSEC;
+		
+		if (mBroadcastState == BROADCAST_STATE_STOPPED || mBroadcastState == BROADCAST_STATE_STOPPING) {
+			notifyRecStateChangedHandle(MSG_STOP_WAIT_RECONNECT);
+			return;
+		}
+
+		mBroadcastState = BROADCAST_STATE_CONNECTING;
+		
+		Log.i(C.TAG, "Wait " + String.valueOf(((float) waitTime) / 1000)
+				+ "sec before reconnect.");
+		notifyRecStateChangedHandle(MSG_RECONNECT_STARTED);
+		 while(waitTime > System.currentTimeMillis())
+		 {
+			if (mBroadcastState == BROADCAST_STATE_STOPPED || mBroadcastState == BROADCAST_STATE_STOPPING) {
+				notifyRecStateChangedHandle(MSG_STOP_WAIT_RECONNECT);
+				return;
+			}
+
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				Log.w(C.TAG, "Interrupted wait to recoonect.", e);
+				throw e;
+			}
+		 }
+		 
+		Log.i(C.TAG, "Reconnect.");
+		(new SendDataThread(broadcastConfig)).start();
+	}
+	
+	/**
 	 * 停止する
 	 */
 	public final void stop() {
-		mIsWorking = false;
+		mBroadcastState = BROADCAST_STATE_STOPPING;
 	}
 
 	/**
-	 * 動作中かを取得する。
+	 * 配信状態を取得すする
 	 * 
-	 * 動作中であるとは
-	 * {@link #start(int, int, int, int, String, String, String, String, String, String, String, String)}
-	 * を実行し、かつ何らかの理由で配信が停止していない状態である。 よって、
-	 * {@link #start(int, int, int, int, String, String, String, String, String, String, String, String)}
-	 * 開始後に、実際に配信が開始されるまでの間も{@link #isBroadcasting()}はtrueを返すので注意。
-	 * 
-	 * @return 動作中の場合はtrue、それ以外の場合はfalse
+	 * @see VoiceSender#BROADCAST_STATE_STOPPED
+	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
+	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+	 * @see VoiceSender#BROADCAST_STATE_STOPPING
 	 */
-	public final boolean isBroadcasting() {
-		return mIsWorking;
+	public final int getBroadcastState() {
+		return mBroadcastState;
 	}
 
 	/**
 	 * 配信情報を取得する
 	 * 
-	 * 放送開始直後には、{@link #isBroadcasting()}でtrueが返ってきても
-	 * {@link #getBroadcastInfo()}で nullが返ることがある。 これは
-	 * {@link #isBroadcasting()}と{@link #getBroadcastInfo()}
-	 * の間で同期をとっていないためである。 しかし、{@link #MSG_STARTED}が通知された以降ならば
-	 * {@link #getBroadcastInfo()}はnullでない値が返る。
-	 * 
-	 * 放送終了間際には、{@link #isBroadcasting()}でfalseが返ってきても
-	 * {@link #getBroadcastInfo()}で nullではない値が返ることがある。 これは
-	 * {@link #isBroadcasting()}と{@link #getBroadcastInfo()}
-	 * の間で厳密に同期をとっていないためである。 しかし、{@link #isBroadcasting()}が返る状況ならまもなく
-	 * {@link #getBroadcastInfo()}でもnullが返るようになるはずである。
+	 * {@link #getBroadcastState()}と{@link #getBroadcastInfo()}
+	 * の間で厳密に同期をとっていないので注意。
 	 * 
 	 * @return 配信中の番組の情報。<br />
 	 *         配信中でない場合はnull。
@@ -1284,6 +1465,8 @@ public class VoiceSender {
 	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
 	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
 	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
+	 * @see VoiceSender#MSG_RECONNECT_STARTED
+	 * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
 	 */
 	public final void addBroadcastStateChangedHandle(Handler handler) {
 		if (handler != null) {

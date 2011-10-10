@@ -83,12 +83,15 @@ public class BroadcastManager {
 	}
 
 	/**
-	 * 配信中かを取得する
+	 * 配信状態取得すする
 	 * 
-	 * @return trueの場合は録音中、それ以外はfalse
+	 * @see VoiceSender#BROADCAST_STATE_STOPPED
+	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
+	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+	 * @see VoiceSender#BROADCAST_STATE_STOPPING
 	 */
-	public static boolean isBroadcasting() {
-		return mBroadcastModule.isBroadcasting();
+	public static int getBroadcastState() {
+		return mBroadcastModule.getBroadcastState();
 	}
 
 	/**
@@ -154,6 +157,8 @@ public class BroadcastManager {
 	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
 	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
 	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
+	 * @see VoiceSender#MSG_RECONNECT_STARTED
+	 * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
 	 */
 	public static void addBroadcastStateChangedHandler(Handler handler) {
 		mBroadcastModule.addBroadcastStateChangedHandler(handler);

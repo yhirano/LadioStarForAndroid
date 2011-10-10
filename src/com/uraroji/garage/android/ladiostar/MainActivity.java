@@ -26,6 +26,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.RandomStringUtils;
 
@@ -161,6 +164,8 @@ public class MainActivity extends TabActivity {
 			case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
 			case VoiceSender.MSG_SEND_STREAM_STARTED:
 			case VoiceSender.MSG_SEND_STREAM_ENDED:
+			case VoiceSender.MSG_RECONNECT_STARTED:
+			case VoiceSender.MSG_STOP_WAIT_RECONNECT:
 				switchViewAsBroadcastState();
 				break;
 			case VoiceSender.MSG_REC_STARTED:
@@ -289,6 +294,8 @@ public class MainActivity extends TabActivity {
 				break;
 			case VoiceSender.MSG_SEND_STREAM_STARTED:
 			case VoiceSender.MSG_SEND_STREAM_ENDED:
+			case VoiceSender.MSG_RECONNECT_STARTED:
+			case VoiceSender.MSG_STOP_WAIT_RECONNECT:
 				switchViewAsBroadcastState();
 				break;
 			case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
@@ -404,10 +411,17 @@ public class MainActivity extends TabActivity {
 			
 			@Override
 			public void onClick(View v) {
-				if (BroadcastManager.isBroadcasting() == false) {
+				switch (BroadcastManager.getBroadcastState()) {
+				case VoiceSender.BROADCAST_STATE_STOPPED:
 					start();
-				} else {
+					break;
+				case VoiceSender.BROADCAST_STATE_CONNECTING:
+				case VoiceSender.BROADCAST_STATE_BROADCASTING:
 					stop();
+					break;
+				case VoiceSender.BROADCAST_STATE_STOPPING:
+				default:
+					break;
 				}
 			}
 		});
@@ -424,7 +438,7 @@ public class MainActivity extends TabActivity {
 
 				// 配信中の場合
 				if (broadcastingInfo != null
-						&& BroadcastManager.isBroadcasting() == true) {
+						&& BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_BROADCASTING) {
 
 					fetchLitenersNumButton.setEnabled(false); // 更新ボタンを押せないようにする
 					fetchLitenersNumButton.setText(R.string.updating); // 更新中の表示にする
@@ -639,7 +653,7 @@ public class MainActivity extends TabActivity {
 		// 関連サイトが存在する場合にのみ有効にする
 		menu.findItem(MENU_ID_REFERENCE_SITE).setEnabled(getSettingChannelUrl().length() != 0);
 		// 配信中は設定を無効にする
-		menu.findItem(MENU_ID_SETTING).setEnabled(BroadcastManager.isBroadcasting() == false);
+		menu.findItem(MENU_ID_SETTING).setEnabled(BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED);
 		
 		return super.onPrepareOptionsMenu(menu);
 	}
@@ -665,7 +679,7 @@ public class MainActivity extends TabActivity {
 				return super.onOptionsItemSelected(item);
 			}
 		case MENU_ID_SETTING:
-			if (BroadcastManager.isBroadcasting() == false) {
+			if (BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
 				startActivity(new Intent(this,
 						LadioStarPreferenceActivity.class));
 				return false;
@@ -1005,10 +1019,13 @@ public class MainActivity extends TabActivity {
 	 * 放送を開始する
 	 */
 	private void start() {
-		if (BroadcastManager.isBroadcasting() == true) {
+		if (BroadcastManager.getBroadcastState() != VoiceSender.BROADCAST_STATE_STOPPED) {
 			return;
 		}
 
+		final ScheduledExecutorService loadingDialogDismissScheduler = Executors.newSingleThreadScheduledExecutor();
+		final Object loadingDialogLock = new Object();
+		
 		// 接続中のプログレスダイアログを表示し、配信が開始したらダイアログを消す
 		final ProgressDialog loadingDialog = new ProgressDialog(this);
 		loadingDialog.setMessage(getString(R.string.connecting));
@@ -1016,7 +1033,8 @@ public class MainActivity extends TabActivity {
 		loadingDialog.setCancelable(false);
 		loadingDialog.show();
 
-		BroadcastManager.addBroadcastStateChangedHandler(new Handler() {
+		// 接続が開始・ないしはエラーの場合はダイアログを閉じる
+		final Handler broadcastStateHandler = new Handler() {
 
 			@Override
 			public void handleMessage(Message msg) {
@@ -1042,22 +1060,54 @@ public class MainActivity extends TabActivity {
 				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
 				case VoiceSender.MSG_SEND_STREAM_STARTED:
 				case VoiceSender.MSG_SEND_STREAM_ENDED:
-					loadingDialog.dismiss();
-					/*
-					 * このHandlerは接続中のプログレスダイアログを消すだけなので、
-					 * 接続中のプログレスダイアログを消したらこのHandlerは必要なくなるので削除
-					 */
-					BroadcastManager.removeBroadcastStateChangedHandler(this);
+				case VoiceSender.MSG_STOP_WAIT_RECONNECT:
+					synchronized (loadingDialogLock) {
+						loadingDialog.dismiss();
+						/*
+						 * このHandlerは接続中のプログレスダイアログを消すだけなので、
+						 * 接続中のプログレスダイアログを消したらこのHandlerは必要なくなるので削除
+						 */
+						BroadcastManager
+								.removeBroadcastStateChangedHandler(this);
+						loadingDialogDismissScheduler.shutdown();
+					}
 					break;
 				case VoiceSender.MSG_REC_STARTED:
 				case VoiceSender.MSG_ENCODE_STARTED:
+				case VoiceSender.MSG_RECONNECT_STARTED:
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what + " when dismiss start dialog.");
 					break;
 				}
 			}
-		});
+		};
+		BroadcastManager.addBroadcastStateChangedHandler(broadcastStateHandler);
+		
+		// 接続開始後、一定時間接続が開始しない場合にはダイアログを閉じる
+		final Handler switchViewHandler = new Handler(){
+			
+			@Override
+			public void handleMessage(Message msg) {
+				// 一定時間接続が開始しないのでダイアログを閉じる場合
+				switchViewAsBroadcastState();
+			}
+		};
+		Runnable runnable = new Runnable() {
+			
+			@Override
+			public void run() {
+				synchronized (loadingDialogLock) {
+					loadingDialog.dismiss();
+					BroadcastManager
+							.removeBroadcastStateChangedHandler(broadcastStateHandler);
+					loadingDialogDismissScheduler.shutdown();
+				}
+				switchViewHandler.sendEmptyMessage(0);
+			}
+		};
+		loadingDialogDismissScheduler.schedule(runnable,
+				C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA + 3, TimeUnit.SECONDS);
 
 		BroadcastManager.start(new BroadcastConfig(getSettingAudioBitrate(),
 				getSettingAudioChannel(), getSettingAudioSampleRate(),
@@ -1071,7 +1121,8 @@ public class MainActivity extends TabActivity {
 	 * 放送を中止する
 	 */
 	private void stop() {
-		if (BroadcastManager.isBroadcasting() == false) {
+		if (BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING
+				|| BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
 			return;
 		}
 
@@ -1109,6 +1160,7 @@ public class MainActivity extends TabActivity {
 				case VoiceSender.MSG_ERROR_RECV_HEADER_RESPONSE:
 				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
 				case VoiceSender.MSG_SEND_STREAM_ENDED:
+				case VoiceSender.MSG_STOP_WAIT_RECONNECT:
 					// プログレスダイアログを消すだけ。メッセージの表示は別のHandlerで表示している。
 					loadingDialog.dismiss();
 					switchViewAsBroadcastState();
@@ -1125,6 +1177,7 @@ public class MainActivity extends TabActivity {
 				case VoiceSender.MSG_REC_STARTED:
 				case VoiceSender.MSG_ENCODE_STARTED:
 				case VoiceSender.MSG_SEND_STREAM_STARTED:
+				case VoiceSender.MSG_RECONNECT_STARTED:
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what
@@ -1140,12 +1193,21 @@ public class MainActivity extends TabActivity {
 	 * 配信状態に応じて、ボタンのテキストなどを切り替える
 	 */
 	private void switchViewAsBroadcastState() {
-		if (BroadcastManager.isBroadcasting() == false) {
-			mBroadcastStatusTextView.setText(R.string.not_broadcasting);
-			mStartStopButton.setText(R.string.start);
-		} else {
+		switch (BroadcastManager.getBroadcastState()) {
+		case VoiceSender.BROADCAST_STATE_CONNECTING:
+			mBroadcastStatusTextView.setText(R.string.connecting);
+			mStartStopButton.setText(R.string.stop);
+			break;
+		case VoiceSender.BROADCAST_STATE_BROADCASTING:
 			mBroadcastStatusTextView.setText(R.string.broadcasting);
 			mStartStopButton.setText(R.string.stop);
+			break;
+		case VoiceSender.BROADCAST_STATE_STOPPING:
+		case VoiceSender.BROADCAST_STATE_STOPPED:
+		default:
+			mBroadcastStatusTextView.setText(R.string.not_broadcasting);
+			mStartStopButton.setText(R.string.start);
+			break;
 		}
 	}
 

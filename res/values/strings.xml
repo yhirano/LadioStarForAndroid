@@ -74,7 +74,7 @@
     <string name="send_data_too_slow">ねとらじ配信を中止しました。送信が間に合いません。ビットレートを下げると、状況が改善するかもしれません。</string>
     <string name="disable_rec">録音できませんでした</string>
     <string name="broadcasting">配信中</string>
-    <string name="not_broadcasting">未配信</string>
+    <string name="not_broadcasting">停止中</string>
     <string name="disable_connect_server_authentication_required">ねとらじサーバに接続できませんでした。認証に失敗しました。</string>
     <string name="disable_connect_server_mountpoint_in_use">ねとらじサーバに接続できませんでした。マウント名は使用中です。別のマウント名で放送してください。</string>
     <string name="disable_connect_server_mountpoint_too_long">ねとらじサーバに接続できませんでした。マウント名が / のみか、あるいはマウント名が長すぎます。マウント名を正しく指定してください。</string>

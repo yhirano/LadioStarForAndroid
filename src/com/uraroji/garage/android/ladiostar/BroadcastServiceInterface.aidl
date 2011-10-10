@@ -45,11 +45,14 @@ interface BroadcastServiceInterface {
 	void stop();
 
 	/**
-	 * 配信中かを取得する
+	 * 配信状態を取得すする
 	 * 
-	 * @return trueの場合は録音中、それ以外はfalse
+	 * @see VoiceSender#BROADCAST_STATE_STOPPED
+	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
+	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+	 * @see VoiceSender#BROADCAST_STATE_STOPPING
 	 */
-	boolean isBroadcasting();
+	int getBroadcastState();
 
 	/**
 	 * 配信情報を取得する
