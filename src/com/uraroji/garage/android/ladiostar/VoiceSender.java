@@ -721,12 +721,8 @@ public class VoiceSender {
 							synchronized (mMp3BufferLock) {
 								try {
 									// バッファに書き込む
-									mMp3Buffer
-											.put(mp3buffer,
-													0,
-													encResult,
-													(mBroadcastState == BROADCAST_STATE_CONNECTING) // 再接続中は古い音声データを上書きする
-											);
+									mMp3Buffer.put(mp3buffer, 0, encResult,
+											true);
 									availableDataSize = mMp3Buffer
 											.getAvailable();
 								} finally {
@@ -776,12 +772,7 @@ public class VoiceSender {
 						synchronized (mMp3BufferLock) {
 							try {
 								// バッファに書き込む
-								mMp3Buffer
-										.put(mp3buffer,
-												0,
-												flushResult,
-												(mBroadcastState == BROADCAST_STATE_CONNECTING)  // 再接続中は古い音声データを上書きする
-												);
+								mMp3Buffer.put(mp3buffer, 0, flushResult, true);
 								availableDataSize = mMp3Buffer.getAvailable();
 							} finally {
 								mMp3BufferLock.notifyAll();
