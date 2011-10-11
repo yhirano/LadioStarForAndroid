@@ -96,9 +96,14 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 
 		try {
-			mBroadcastServiceInterface.start(broadcastConfig);
+			if (mBroadcastServiceInterface != null) {
+				mBroadcastServiceInterface.start(broadcastConfig);
+			} else {
+				Log.w(C.TAG, "Service interface is NULL in start.");
+				notifyPlayStateChanged(MSG_ERROR_START_SERVICE_CONNECTION);
+			}
 		} catch (RemoteException e) {
-			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occurred.");
+			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occurred in start.");
 			notifyPlayStateChanged(MSG_ERROR_START_SERVICE_CONNECTION);
 		}
 	}
@@ -110,9 +115,14 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 
 		try {
-			mBroadcastServiceInterface.stop();
+			if (mBroadcastServiceInterface != null) {
+				mBroadcastServiceInterface.stop();
+			} else {
+				Log.w(C.TAG, "Service interface is NULL in stop.");
+				notifyPlayStateChanged(MSG_ERROR_STOP_SERVICE_CONNECTION);
+			}
 		} catch (RemoteException e) {
-			Log.w(C.TAG, "RemoteException(" + e.toString() + ")  occurred.");
+			Log.w(C.TAG, "RemoteException(" + e.toString() + ")  occurred in stop.");
 			notifyPlayStateChanged(MSG_ERROR_STOP_SERVICE_CONNECTION);
 		}
 	}
@@ -134,21 +144,34 @@ public class BroadcastAtService implements BroadcastInterface {
 	@Override
 	public int getBroadcastState() {
 		try {
-			return mBroadcastServiceInterface.getBroadcastState();
+			if (mBroadcastServiceInterface != null) {
+				return mBroadcastServiceInterface.getBroadcastState();
+			} else {
+				Log.w(C.TAG, "Service interface is NULL in isBroadcasting.");
+				// どうしようもないのでとりあえずVoiceSender.BROADCAST_STATE_STOPPEDを返す
+				return VoiceSender.BROADCAST_STATE_STOPPED;
+			}
 		} catch (RemoteException e) {
-			Log.w(C.TAG, "RemoteException(" + e.toString() + ")  occurred.");
-			// どうしようもないのでとりあえずBROADCAST_STATE_STOPPEDを返す
+			Log.w(C.TAG, "RemoteException(" + e.toString()
+					+ ")  occurred in getBroadcastState.");
+			// どうしようもないのでとりあえずVoiceSender.BROADCAST_STATE_STOPPEDを返す
 			return VoiceSender.BROADCAST_STATE_STOPPED;
 		}
 	}
 
-
 	@Override
 	public BroadcastInfo getBroadcastInfo() {
 		try {
-			return mBroadcastServiceInterface.getBroadcastInfo();
+			if (mBroadcastServiceInterface != null) {
+				return mBroadcastServiceInterface.getBroadcastInfo();
+			} else {
+				Log.w(C.TAG, "Service interface is NULL in getBroadcastInfo.");
+				// どうしようもないのでとりあえずnullを返す
+				return null;
+			}
 		} catch (RemoteException e) {
-			Log.w(C.TAG, "RemoteException(" + e.toString() + ")  occurred.");
+			Log.w(C.TAG, "RemoteException(" + e.toString()
+					+ ")  occurred in getBroadcastInfo.");
 			// どうしようもないのでとりあえずnullを返す
 			return null;
 		}
@@ -157,9 +180,15 @@ public class BroadcastAtService implements BroadcastInterface {
 	@Override
 	public char getVolumeRate() {
 		try {
-			return mBroadcastServiceInterface.getVolumeRate();
+			if (mBroadcastServiceInterface != null) {
+				return mBroadcastServiceInterface.getVolumeRate();
+			} else {
+				Log.w(C.TAG, "Service interface is NULL in getVolumeRate.");
+				// どうしようもないので100を返す
+				return 100;
+			}
 		} catch (RemoteException e) {
-			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd.");
+			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd in getVolumeRate.");
 			// どうしようもないので100を返す
 			return 100;
 		}
@@ -168,9 +197,14 @@ public class BroadcastAtService implements BroadcastInterface {
 	@Override
 	public void setVolumeRate(char volumeRate) {
 		try {
-			mBroadcastServiceInterface.setVolumeRate(volumeRate);
+			if (mBroadcastServiceInterface != null) {
+				mBroadcastServiceInterface.setVolumeRate(volumeRate);
+			} else {
+				Log.w(C.TAG, "Service interface is NULL in setVolumeRate.");
+				// どうしようもないのでなにもしない
+			}
 		} catch (RemoteException e) {
-			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd.");
+			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd in setVolumeRate.");
 			// どうしようもないのでなにもしない
 		}
 	}
