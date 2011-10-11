@@ -1340,6 +1340,7 @@ public class VoiceSender {
 		final long waitTime = System.currentTimeMillis() + WAIT_RECONNECT_MSEC;
 		
 		if (mBroadcastState == BROADCAST_STATE_STOPPED || mBroadcastState == BROADCAST_STATE_STOPPING) {
+			mBroadcastState = BROADCAST_STATE_STOPPED;
 			notifyRecStateChangedHandle(MSG_STOP_WAIT_RECONNECT);
 			return;
 		}
@@ -1352,6 +1353,7 @@ public class VoiceSender {
 		 while(waitTime > System.currentTimeMillis())
 		 {
 			if (mBroadcastState == BROADCAST_STATE_STOPPED || mBroadcastState == BROADCAST_STATE_STOPPING) {
+				mBroadcastState = BROADCAST_STATE_STOPPED;
 				notifyRecStateChangedHandle(MSG_STOP_WAIT_RECONNECT);
 				return;
 			}
