@@ -1120,6 +1120,7 @@ public class VoiceSender {
 					byte[] readBuffer = new byte[16 * 1024];
 
 					while (mBroadcastState == BROADCAST_STATE_BROADCASTING) {
+						readSize = 0;
 						synchronized (mMp3BufferLock) {
 							final int availableSize = mMp3Buffer.getAvailable();
 							if (availableSize != 0) {
@@ -1157,12 +1158,13 @@ public class VoiceSender {
 							}
 						}
 						try {
-							sockOut.write(readBuffer, 0, readSize);
-							if (C.LOCAL_LOG) {
-								Log.v(C.TAG,
-										"Sent "
-												+ String.valueOf(readSize)
-												+ " bytes data.");
+							if (readSize != 0) {
+								sockOut.write(readBuffer, 0, readSize);
+								if (C.LOCAL_LOG) {
+									Log.v(C.TAG,
+											"Sent " + String.valueOf(readSize)
+													+ " bytes data.");
+								}
 							}
 						} catch (IOException e) {
 							Log.w(C.TAG,
