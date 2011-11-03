@@ -35,6 +35,7 @@ import java.net.UnknownHostException;
 import java.nio.BufferOverflowException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -592,12 +593,19 @@ public class VoiceSender {
 			Log.d(C.TAG, "Start Encode thread.");
 
 			try {
+				SimpleLame.log(C.LOCAL_LOG);
 				// Lame init
 				SimpleLame.init(mBroadcastConfig.getAudioSampleRate(),
 						mBroadcastConfig.getAudioChannel(),
 						mBroadcastConfig.getAudioSampleRate(),
 						mBroadcastConfig.getAudioBrate(),
-						mBroadcastConfig.getAudioMp3EncodeQuality());
+						mBroadcastConfig.getAudioMp3EncodeQuality(),
+						mBroadcastConfig.getChannelTitle(),
+						mBroadcastConfig.getChannelDjName(),
+						null,
+						String.valueOf(Calendar.getInstance().get(Calendar.YEAR)),
+						mBroadcastConfig.getChannelDescription()
+						);
 				Log.d(C.TAG,
 						"SimpleLame is initialized. (SampleRate="
 								+ String.valueOf(mBroadcastConfig
