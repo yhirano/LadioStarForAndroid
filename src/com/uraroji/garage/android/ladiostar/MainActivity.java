@@ -93,27 +93,7 @@ public class MainActivity extends TabActivity {
 
 		@Override
 		public void handleMessage(Message msg) {
-			/*
-			 * サービスで配信する場合は、サービス側がメッセージやダイアログを表示するのでこのアクティビティでは、
-			 * サービスに接続できなかった場合のメッセージを表示する。
-			 */
 			switch (msg.what) {
-			case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
-				break;
-			case BroadcastServiceConnector.MSG_ERROR_START_SERVICE_CONNECTION:
-				switchViewAsBroadcastState();
-				(new AlertDialog.Builder(MainActivity.this))
-						.setMessage(R.string.disable_rec_start)
-						.setPositiveButton(R.string.close, null).create()
-						.show();
-				break;
-			case BroadcastServiceConnector.MSG_ERROR_STOP_SERVICE_CONNECTION:
-				switchViewAsBroadcastState();
-				(new AlertDialog.Builder(MainActivity.this))
-						.setMessage(R.string.failed_rec_stop)
-						.setPositiveButton(R.string.close, null).create()
-						.show();
-				break;
 			case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
 			case VoiceSender.MSG_ERROR_REC_START:
 			case VoiceSender.MSG_ERROR_AUDIO_RECORD:
@@ -149,6 +129,38 @@ public class MainActivity extends TabActivity {
 		}
 	};
 	
+	/*
+	 * 配信の開始時、停止時にメッセージやダイアログを表示するためのHandler
+	 */
+	private final Handler mServiceWatchHandler = new Handler() {
+
+		@Override
+		public void handleMessage(Message msg) {
+			// サービスに接続できなかった場合のメッセージを表示する。
+			switch (msg.what) {
+			case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
+				break;
+			case BroadcastServiceConnector.MSG_ERROR_START_SERVICE_CONNECTION:
+				switchViewAsBroadcastState();
+				(new AlertDialog.Builder(MainActivity.this))
+						.setMessage(R.string.disable_rec_start)
+						.setPositiveButton(R.string.close, null).create()
+						.show();
+				break;
+			case BroadcastServiceConnector.MSG_ERROR_STOP_SERVICE_CONNECTION:
+				switchViewAsBroadcastState();
+				(new AlertDialog.Builder(MainActivity.this))
+						.setMessage(R.string.failed_rec_stop)
+						.setPositiveButton(R.string.close, null).create()
+						.show();
+				break;
+			default:
+				Log.w(C.TAG, "Unknown received message " + msg.what + " when start.");
+				break;
+			}
+		}
+	};
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -158,37 +170,6 @@ public class MainActivity extends TabActivity {
 		Thread.setDefaultUncaughtExceptionHandler(new AppUncaughtExceptionHandler(
 				this));
 
-		/*
-		 * サービスに接続した直後にボタン類の書き換えを行う。
-		 * サービスに接続するまでは配信中かどうかを確認できないため、ボタン類の書き換えができない。
-		 * よって、サービス接続直後にボタン類の書き換えを行う。
-		 */
-		BroadcastManager.getConnector().addBroadcastStateChangedHandler(
-				new Handler() {
-
-			@Override
-			public void handleMessage(Message msg) {
-				switch (msg.what) {
-				case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
-					switchViewAsBroadcastState();
-					/*
-					 * サービスは1度起動したら、配信されていない状態でアプリを終了しない限り
-					 * 停止しない。
-					 * よって、1度サービスを起動してしまえば配信中かどうかを取得できるため、
-					 * サービス接続通知によるボタン類書き換えは必要なくなるので、
-					 * サービス接続通知の受信をする必要が無い。
-					 */
-							BroadcastManager.getConnector()
-									.removeBroadcastStateChangedHandler(this);
-					break;
-				default:
-					Log.w(C.TAG, "Unknown received message " + msg.what
-							+ " when watch service connection.");
-					break;
-				}
-			}
-		});
-		
 		// VoiceSenderManager初期化
 		BroadcastManager.getConnector().init(getApplicationContext());
 
@@ -396,7 +377,7 @@ public class MainActivity extends TabActivity {
 		 * サービスに接続するまでは配信中かどうかを確認できないため、ボタン類の書き換えができない。
 		 * よって、サービス接続直後にボタン類の書き換えを行う。
 		 */
-		BroadcastManager.getConnector().addBroadcastStateChangedHandler(
+		BroadcastManager.getConnector().addServiceConnectChangeHandler(
 				new Handler() {
 
 			@Override
@@ -413,7 +394,7 @@ public class MainActivity extends TabActivity {
 					 * サービス接続通知の受信をする必要が無い。
 					 */
 					BroadcastManager.getConnector()
-							.removeBroadcastStateChangedHandler(this);
+							.removeServiceConnectChangeHandler(this);
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what
@@ -426,6 +407,8 @@ public class MainActivity extends TabActivity {
 		// 配信開始後にメッセージやダイアログを表示するために、BoladcastManagerにHandlerを設定する。
 		BroadcastManager.getConnector()
 				.addBroadcastStateChangedHandler(mBroadcastWatchHandler);
+		BroadcastManager.getConnector()
+				.addServiceConnectChangeHandler(mServiceWatchHandler);
 	}
 
 	@Override
@@ -445,6 +428,8 @@ public class MainActivity extends TabActivity {
 		// 配信開始後にメッセージ・ダイアログを表示するための設定済みHandlerを削除する
 		BroadcastManager.getConnector()
 				.removeBroadcastStateChangedHandler(mBroadcastWatchHandler);
+		BroadcastManager.getConnector()
+				.removeServiceConnectChangeHandler(mServiceWatchHandler);
 
 		switchViewAsBroadcastState();
 		BroadcastManager.getConnector().release();
@@ -976,11 +961,28 @@ public class MainActivity extends TabActivity {
 				case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
 				case VoiceSender.MSG_SEND_STREAM_ENDED:
 				case VoiceSender.MSG_STOP_WAIT_RECONNECT:
-					// プログレスダイアログを消すだけ。メッセージの表示は別のHandlerで表示している。
+					// プログレスダイアログを消すだけ
 					loadingDialog.dismiss();
 					switchViewAsBroadcastState();
 					BroadcastManager.getConnector().removeBroadcastStateChangedHandler(this);
 					break;
+				case VoiceSender.MSG_REC_STARTED:
+				case VoiceSender.MSG_ENCODE_STARTED:
+				case VoiceSender.MSG_SEND_STREAM_STARTED:
+				case VoiceSender.MSG_RECONNECT_STARTED:
+					break;
+				default:
+					Log.w(C.TAG, "Unknown received message " + msg.what
+							+ " when stop.");
+					break;
+				}
+			}
+		});
+		BroadcastManager.getConnector().addServiceConnectChangeHandler(new Handler() {
+
+			@Override
+			public void handleMessage(Message msg) {
+				switch (msg.what) {
 				case BroadcastServiceConnector.MSG_ERROR_STOP_SERVICE_CONNECTION:
 					loadingDialog.dismiss();
 					switchViewAsBroadcastState();
@@ -988,11 +990,7 @@ public class MainActivity extends TabActivity {
 							.setMessage(R.string.failed_rec_stop)
 							.setPositiveButton(R.string.close, null).create()
 							.show();
-					break;
-				case VoiceSender.MSG_REC_STARTED:
-				case VoiceSender.MSG_ENCODE_STARTED:
-				case VoiceSender.MSG_SEND_STREAM_STARTED:
-				case VoiceSender.MSG_RECONNECT_STARTED:
+					BroadcastManager.getConnector().removeServiceConnectChangeHandler(this);
 					break;
 				default:
 					Log.w(C.TAG, "Unknown received message " + msg.what

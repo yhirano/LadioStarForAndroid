@@ -41,7 +41,7 @@ public class BroadcastServiceConnector {
 	/**
 	 * サービスに接続した
 	 */
-	public static final int MSG_CONNECTED_SERVICE = 100;
+	public static final int MSG_CONNECTED_SERVICE = 0;
 
 	/**
 	 * サービスへの接続に失敗したため配信を開始できない
@@ -50,14 +50,14 @@ public class BroadcastServiceConnector {
 	 * {@link BroadcastServiceConnector#start(int, int, int, int, String, String, String, String, String, String, String, String)}
 	 * で再生が開始できない場合にのみ発行される。
 	 */
-	public static final int MSG_ERROR_START_SERVICE_CONNECTION = 101;
+	public static final int MSG_ERROR_START_SERVICE_CONNECTION = 1;
 
 	/**
 	 * サービスへの接続に失敗したため配信を停止できない
 	 * 
 	 * {@link VoiceSender#stop()}で終了できない場合にのみ発行される。
 	 */
-	public static final int MSG_ERROR_STOP_SERVICE_CONNECTION = 102;
+	public static final int MSG_ERROR_STOP_SERVICE_CONNECTION = 2;
 
 	/**
 	 * BroadcastServiceへのインターフェース
@@ -72,13 +72,23 @@ public class BroadcastServiceConnector {
 	/**
 	 * 配信の状態変化を通知するハンドラのリスト
 	 */
-	private ArrayList<Handler> mHandlerList = new ArrayList<Handler>();;
+	private ArrayList<Handler> mBroadcastStateChangeHandlerList = new ArrayList<Handler>();;
 
 	/**
-	 * mHandlerListのロックオブジェクト
+	 * mBroadcastStateChangeHandlerListのロックオブジェクト
 	 */
-	private final Object mHandlerListLock = new Object();
+	private final Object mBroadcastStateChangeHandlerListLock = new Object();
 
+	/**
+	 * サービス接続の状態変化を通知するハンドラのリスト
+	 */
+	private ArrayList<Handler> mServiceConnectChangeHandlerList = new ArrayList<Handler>();;
+
+	/**
+	 * mServiceConnectChangeHandlerListのロックオブジェクト
+	 */
+	private final Object mServiceConnectChangeHandlerListLock = new Object();
+	
 	/**
 	 * 初期化
 	 * 
@@ -112,11 +122,11 @@ public class BroadcastServiceConnector {
 				mBroadcastServiceInterface.start(broadcastConfig);
 			} else {
 				Log.w(C.TAG, "Service interface is NULL in start.");
-				notifyPlayStateChanged(MSG_ERROR_START_SERVICE_CONNECTION);
+				notifyServiceConnectChanged(MSG_ERROR_START_SERVICE_CONNECTION);
 			}
 		} catch (RemoteException e) {
 			Log.w(C.TAG, "RemoteException(" + e.toString() + ") occurred in start.");
-			notifyPlayStateChanged(MSG_ERROR_START_SERVICE_CONNECTION);
+			notifyServiceConnectChanged(MSG_ERROR_START_SERVICE_CONNECTION);
 		}
 	}
 
@@ -133,11 +143,11 @@ public class BroadcastServiceConnector {
 				mBroadcastServiceInterface.stop();
 			} else {
 				Log.w(C.TAG, "Service interface is NULL in stop.");
-				notifyPlayStateChanged(MSG_ERROR_STOP_SERVICE_CONNECTION);
+				notifyServiceConnectChanged(MSG_ERROR_STOP_SERVICE_CONNECTION);
 			}
 		} catch (RemoteException e) {
 			Log.w(C.TAG, "RemoteException(" + e.toString() + ")  occurred in stop.");
-			notifyPlayStateChanged(MSG_ERROR_STOP_SERVICE_CONNECTION);
+			notifyServiceConnectChanged(MSG_ERROR_STOP_SERVICE_CONNECTION);
 		}
 	}
 
@@ -247,16 +257,13 @@ public class BroadcastServiceConnector {
 	}
 
 	/**
-	 * 動作の状態変化を通知するハンドラを追加する
+	 * 配信の状態変化を通知するハンドラを追加する
 	 * 
-	 * 動作状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
+	 * 配信状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
 	 * 
 	 * @param handler
 	 *            動作の状態変化を通知するハンドラ
 	 * 
-	 * @see BroadcastServiceConnector#MSG_CONNECTED_SERVICE
-	 * @see BroadcastServiceConnector#MSG_ERROR_START_SERVICE_CONNECTION
-	 * @see BroadcastServiceConnector#MSG_ERROR_STOP_SERVICE_CONNECTION
 	 * @see VoiceSender#MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS
 	 * @see VoiceSender#MSG_ERROR_REC_START
 	 * @see VoiceSender#MSG_REC_STARTED
@@ -284,43 +291,41 @@ public class BroadcastServiceConnector {
 	 * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
 	 */
 	public void addBroadcastStateChangedHandler(Handler handler) {
-		synchronized (mHandlerListLock) {
+		synchronized (mBroadcastStateChangeHandlerListLock) {
 			if (handler != null) {
-				mHandlerList.add(handler);
+				mBroadcastStateChangeHandlerList.add(handler);
 			}
 		}
 	}
 
 	/**
-	 * 動作の状態変化を通知するハンドラを削除する
+	 * 配信の状態変化を通知するハンドラを削除する
 	 * 
 	 * @param handler
 	 *            動作の状態変化を通知するハンドラ
 	 */
 	public void removeBroadcastStateChangedHandler(Handler handler) {
-		synchronized (mHandlerListLock) {
-			mHandlerList.remove(handler);
+		synchronized (mBroadcastStateChangeHandlerListLock) {
+			mBroadcastStateChangeHandlerList.remove(handler);
 		}
 	}
 
 	/**
-	 * 登録されたハンドラにメッセージを送信する
-	 * 
-	 * @param what
+	 * 配信の状態変化を通知するハンドラをクリアする
 	 */
-	public void clearBroadcastStateChangedHandler() {
-		synchronized (mHandlerListLock) {
-			mHandlerList.clear();
+	public void clearBroadcastStateChangeHandler() {
+		synchronized (mBroadcastStateChangeHandlerListLock) {
+			mBroadcastStateChangeHandlerList.clear();
 		}
 	}
 
 	/**
-	 * 登録されたハンドラにメッセージを送信する
+	 * 登録された配信の状態変化を通知するハンドラにメッセージを送信する
 	 * 
 	 * @param what
 	 */
-	private void notifyPlayStateChanged(int what) {
-		for (Handler h : getHandlerListClone()) {
+	private void notifyBroadcastStateChanged(int what) {
+		for (Handler h : getBroadcastStateChangeHandlerListClone()) {
 			if (h != null) {
 				h.sendEmptyMessage(what);
 			}
@@ -328,19 +333,87 @@ public class BroadcastServiceConnector {
 	}
 
 	/**
-	 * 配信状態が変わった際のハンドラーリストのクローンしたリストを取得する。
+	 * 配信の状態変化を通知するハンドラリストのクローンしたリストを取得する。
 	 * 
 	 * 浅いクローンなので注意。
 	 * 
-	 * @return 再生状態が変わった際のハンドラーリストのクローンしたリスト
+	 * @return 配信の状態変化を通知するハンドラリストのクローンしたリスト
 	 */
 	@SuppressWarnings("unchecked")
-	private ArrayList<Handler> getHandlerListClone() {
-		synchronized (mHandlerListLock) {
-			return (ArrayList<Handler>) mHandlerList.clone();
+	private ArrayList<Handler> getBroadcastStateChangeHandlerListClone() {
+		synchronized (mBroadcastStateChangeHandlerListLock) {
+			return (ArrayList<Handler>) mBroadcastStateChangeHandlerList.clone();
 		}
 	}
 
+	/**
+	 * 配信の状態変化を通知するハンドラを追加する
+	 * 
+	 * 配信状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
+	 * 
+	 * @param handler
+	 *            動作の状態変化を通知するハンドラ
+	 * 
+	 * @see BroadcastServiceConnector#MSG_CONNECTED_SERVICE
+	 * @see BroadcastServiceConnector#MSG_ERROR_START_SERVICE_CONNECTION
+	 * @see BroadcastServiceConnector#MSG_ERROR_STOP_SERVICE_CONNECTION
+	 */
+	public void addServiceConnectChangeHandler(Handler handler) {
+		synchronized (mServiceConnectChangeHandlerListLock) {
+			if (handler != null) {
+				mServiceConnectChangeHandlerList.add(handler);
+			}
+		}
+	}
+
+	/**
+	 * 配信の状態変化を通知するハンドラを削除する
+	 * 
+	 * @param handler
+	 *            動作の状態変化を通知するハンドラ
+	 */
+	public void removeServiceConnectChangeHandler(Handler handler) {
+		synchronized (mServiceConnectChangeHandlerListLock) {
+			mServiceConnectChangeHandlerList.remove(handler);
+		}
+	}
+
+	/**
+	 * 配信の状態変化を通知するハンドラをクリアする
+	 */
+	public void clearServiceConnectChangeHandler() {
+		synchronized (mServiceConnectChangeHandlerListLock) {
+			mServiceConnectChangeHandlerList.clear();
+		}
+	}
+
+	/**
+	 * 登録された配信の状態変化を通知するハンドラにメッセージを送信する
+	 * 
+	 * @param what
+	 */
+	private void notifyServiceConnectChanged(int what) {
+		for (Handler h : getServiceConnectChangeHandlerListClone()) {
+			if (h != null) {
+				h.sendEmptyMessage(what);
+			}
+		}
+	}
+
+	/**
+	 * 配信の状態変化を通知するハンドラリストのクローンしたリストを取得する。
+	 * 
+	 * 浅いクローンなので注意。
+	 * 
+	 * @return 配信の状態変化を通知するハンドラリストのクローンしたリスト
+	 */
+	@SuppressWarnings("unchecked")
+	private ArrayList<Handler> getServiceConnectChangeHandlerListClone() {
+		synchronized (mServiceConnectChangeHandlerListLock) {
+			return (ArrayList<Handler>) mServiceConnectChangeHandlerList.clone();
+		}
+	}
+	
 	/**
 	 * 再生サービスからのコールバック
 	 */
@@ -348,7 +421,7 @@ public class BroadcastServiceConnector {
 
 		@Override
 		public void changed(int changedState) throws RemoteException {
-			notifyPlayStateChanged(changedState);
+			notifyBroadcastStateChanged(changedState);
 		}
 	};
 
@@ -370,7 +443,7 @@ public class BroadcastServiceConnector {
 				Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd.");
 			}
 			
-			notifyPlayStateChanged(MSG_CONNECTED_SERVICE);
+			notifyServiceConnectChanged(MSG_CONNECTED_SERVICE);
 		}
 
 		@Override
