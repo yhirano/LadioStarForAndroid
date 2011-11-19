@@ -27,10 +27,10 @@ package com.uraroji.garage.android.ladiostar;
  */
 interface BroadcastStateChangedCallbackInterface {
 
-	/**
-	 * 配信状態が変化した
-	 *
-	 * @param changedState 変化した後の状態
-	 */
-	void changed(in int changedState);
+    /**
+     * 配信状態が変化した
+     *
+     * @param changedState 変化した後の状態
+     */
+    void changed(in int changedState);
 }

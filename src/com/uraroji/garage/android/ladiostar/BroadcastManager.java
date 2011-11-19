@@ -23,31 +23,27 @@
 package com.uraroji.garage.android.ladiostar;
 
 /**
- * マイクから取得した音声をMP3変換し、サーバに送信する処理（録音と配信）を管理する
- * 
- * 複数の画面から共通して録音・配信処理の管理ができる。
+ * マイクから取得した音声をMP3変換し、サーバに送信する処理（録音と配信）を管理する 複数の画面から共通して録音・配信処理の管理ができる。
  */
 public class BroadcastManager {
 
-	/**
-	 * 配信サービスとのコネクタ
-	 */
-	private static BroadcastServiceConnector mBroadcastServiceConnector = new BroadcastServiceConnector();
+    /**
+     * 配信サービスとのコネクタ
+     */
+    private static BroadcastServiceConnector mBroadcastServiceConnector = new BroadcastServiceConnector();
 
-	/**
-	 * コンストラクタ
-	 * 
-	 * シングルトンなのでprivateとする
-	 */
-	private BroadcastManager() {
-	}
+    /**
+     * コンストラクタ シングルトンなのでprivateとする
+     */
+    private BroadcastManager() {
+    }
 
-	/**
-	 * 配信サービスとのコネクタを取得する
-	 * 
-	 * @return 配信サービスとのコネクタ
-	 */
-	public static BroadcastServiceConnector getConnector() {
-		return mBroadcastServiceConnector;
-	}
+    /**
+     * 配信サービスとのコネクタを取得する
+     * 
+     * @return 配信サービスとのコネクタ
+     */
+    public static BroadcastServiceConnector getConnector() {
+        return mBroadcastServiceConnector;
+    }
 }

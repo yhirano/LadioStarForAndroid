@@ -1,53 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-	<PreferenceCategory android:title="@string/channel_info">
-		<EditTextPreference android:key="channel_dj_name"
-			android:singleLine="true" android:title="@string/channel_dj_name"
-			android:summary="@string/channel_dj_name_summary"
-			android:dialogTitle="@string/channel_dj_name" android:dialogMessage="@string/channel_dj_name_message" />
-		<EditTextPreference android:key="channel_title"
-			android:singleLine="true" android:title="@string/channel_title"
-			android:summary="@string/channel_title_summary" android:dialogTitle="@string/channel_title"
-			android:dialogMessage="@string/channel_title_message" />
-		<EditTextPreference android:key="channel_description"
-			android:singleLine="true" android:title="@string/channel_description"
-			android:summary="@string/channel_description_summary"
-			android:dialogTitle="@string/channel_description"
-			android:dialogMessage="@string/channel_description_message" />
-		<EditTextPreference android:key="channel_url"
-			android:singleLine="true" android:title="@string/channel_url"
-			android:summary="@string/channel_url_summary" android:dialogTitle="@string/channel_url"
-			android:dialogMessage="@string/channel_url_message"
-			android:inputType="textUri" />
-		<EditTextPreference android:key="channel_genre"
-			android:singleLine="true" android:title="@string/channel_genre"
-			android:summary="@string/channel_genre_summary" android:dialogTitle="@string/channel_genre"
-			android:dialogMessage="@string/channel_genre_message" />
-		<EditTextPreference android:key="channel_mount"
-			android:singleLine="true" android:title="@string/channel_mount"
-			android:summary="@string/channel_mount_summary" android:dialogTitle="@string/channel_mount"
-			android:dialogMessage="@string/channel_mount_message" />
-		<ListPreference android:key="channel_server"
-			android:title="@string/channel_server" android:summary="@string/channel_server_summary"
-			android:dialogTitle="@string/channel_server" android:entries="@array/server_entries"
-			android:entryValues="@array/server_entryvalues" />
-	</PreferenceCategory>
-	<PreferenceCategory android:title="@string/audio_info">
-		<ListPreference android:key="audio_bitrate"
-			android:title="@string/audio_bitrate" android:summary="@string/audio_bitrate_summary"
-			android:dialogTitle="@string/audio_bitrate" android:entries="@array/bitrate_entries"
-			android:entryValues="@array/bitrate_entryvalues" />
-		<ListPreference android:key="audio_channel"
-			android:title="@string/audio_channel" android:summary="@string/audio_channel_summary"
-			android:dialogTitle="@string/audio_channel" android:entries="@array/channel_entries"
-			android:entryValues="@array/channel_entryvalues" />
-		<ListPreference android:key="audio_sample_rate"
-			android:title="@string/audio_sample_rate" android:summary="@string/audio_sample_rate_summary"
-			android:dialogTitle="@string/audio_sample_rate" android:entries="@array/sample_rate_entries"
-			android:entryValues="@array/sample_rate_entryvalues" />
-		<ListPreference android:key="audio_mp3_encode_quality"
-			android:title="@string/audio_mp3_encode_quality" android:summary="@string/audio_mp3_encode_quality_summary"
-			android:dialogTitle="@string/audio_mp3_encode_quality" android:entries="@array/mp3_encode_quality_entries"
-			android:entryValues="@array/mp3_encode_quality_entryvalues" />
-	</PreferenceCategory>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory android:title="@string/channel_info" >
+
+        <EditTextPreference
+            android:dialogMessage="@string/channel_dj_name_message"
+            android:dialogTitle="@string/channel_dj_name"
+            android:key="channel_dj_name"
+            android:singleLine="true"
+            android:summary="@string/channel_dj_name_summary"
+            android:title="@string/channel_dj_name" />
+
+        <EditTextPreference
+            android:dialogMessage="@string/channel_title_message"
+            android:dialogTitle="@string/channel_title"
+            android:key="channel_title"
+            android:singleLine="true"
+            android:summary="@string/channel_title_summary"
+            android:title="@string/channel_title" />
+
+        <EditTextPreference
+            android:dialogMessage="@string/channel_description_message"
+            android:dialogTitle="@string/channel_description"
+            android:key="channel_description"
+            android:singleLine="true"
+            android:summary="@string/channel_description_summary"
+            android:title="@string/channel_description" />
+
+        <EditTextPreference
+            android:dialogMessage="@string/channel_url_message"
+            android:dialogTitle="@string/channel_url"
+            android:inputType="textUri"
+            android:key="channel_url"
+            android:singleLine="true"
+            android:summary="@string/channel_url_summary"
+            android:title="@string/channel_url" />
+
+        <EditTextPreference
+            android:dialogMessage="@string/channel_genre_message"
+            android:dialogTitle="@string/channel_genre"
+            android:key="channel_genre"
+            android:singleLine="true"
+            android:summary="@string/channel_genre_summary"
+            android:title="@string/channel_genre" />
+
+        <EditTextPreference
+            android:dialogMessage="@string/channel_mount_message"
+            android:dialogTitle="@string/channel_mount"
+            android:key="channel_mount"
+            android:singleLine="true"
+            android:summary="@string/channel_mount_summary"
+            android:title="@string/channel_mount" />
+
+        <ListPreference
+            android:dialogTitle="@string/channel_server"
+            android:entries="@array/server_entries"
+            android:entryValues="@array/server_entryvalues"
+            android:key="channel_server"
+            android:summary="@string/channel_server_summary"
+            android:title="@string/channel_server" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/audio_info" >
+
+        <ListPreference
+            android:dialogTitle="@string/audio_bitrate"
+            android:entries="@array/bitrate_entries"
+            android:entryValues="@array/bitrate_entryvalues"
+            android:key="audio_bitrate"
+            android:summary="@string/audio_bitrate_summary"
+            android:title="@string/audio_bitrate" />
+
+        <ListPreference
+            android:dialogTitle="@string/audio_channel"
+            android:entries="@array/channel_entries"
+            android:entryValues="@array/channel_entryvalues"
+            android:key="audio_channel"
+            android:summary="@string/audio_channel_summary"
+            android:title="@string/audio_channel" />
+
+        <ListPreference
+            android:dialogTitle="@string/audio_sample_rate"
+            android:entries="@array/sample_rate_entries"
+            android:entryValues="@array/sample_rate_entryvalues"
+            android:key="audio_sample_rate"
+            android:summary="@string/audio_sample_rate_summary"
+            android:title="@string/audio_sample_rate" />
+
+        <ListPreference
+            android:dialogTitle="@string/audio_mp3_encode_quality"
+            android:entries="@array/mp3_encode_quality_entries"
+            android:entryValues="@array/mp3_encode_quality_entryvalues"
+            android:key="audio_mp3_encode_quality"
+            android:summary="@string/audio_mp3_encode_quality_summary"
+            android:title="@string/audio_mp3_encode_quality" />
+    </PreferenceCategory>
+
 </PreferenceScreen>

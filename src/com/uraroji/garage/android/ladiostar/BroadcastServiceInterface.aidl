@@ -31,63 +31,61 @@ import com.uraroji.garage.android.ladiostar.BroadcastStateChangedCallbackInterfa
  */
 interface BroadcastServiceInterface {
 
-	/**
-	 * 配信を開始する
-	 * 
-	 * @param broadcastConfig
-	 *            配信設定
-	 */
-	void start(in BroadcastConfig broadcastConfig);
+    /**
+     * 配信を開始する
+     * 
+     * @param broadcastConfig 配信設定
+     */
+    void start(in BroadcastConfig broadcastConfig);
 
-	/**
-	 * 配信を停止する
-	 */
-	void stop();
+    /**
+     * 配信を停止する
+     */
+    void stop();
 
-	/**
-	 * 配信状態を取得すする
-	 * 
-	 * @see VoiceSender#BROADCAST_STATE_STOPPED
-	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
-	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
-	 * @see VoiceSender#BROADCAST_STATE_STOPPING
-	 */
-	int getBroadcastState();
+    /**
+     * 配信状態を取得すする
+     * 
+     * @see VoiceSender#BROADCAST_STATE_STOPPED
+     * @see VoiceSender#BROADCAST_STATE_CONNECTING
+     * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+     * @see VoiceSender#BROADCAST_STATE_STOPPING
+     */
+    int getBroadcastState();
 
-	/**
-	 * 配信情報を取得する
-	 * 
-	 * @return 配信中の番組の情報。<br />
-	 *         配信中でない場合はnull。
-	 */
-	BroadcastInfo getBroadcastInfo();
+    /**
+     * 配信情報を取得する
+     * 
+     * @return 配信中の番組の情報。<br />
+     *         配信中でない場合はnull。
+     */
+    BroadcastInfo getBroadcastInfo();
 
-	/**
-	 * 音量を取得する
-	 * 
-	 * @return 音量。1倍を100%とする。
-	 */
-	char getVolumeRate();
+    /**
+     * 音量を取得する
+     * 
+     * @return 音量。1倍を100%とする。
+     */
+    char getVolumeRate();
 
-	/**
-	 * 音量を設定する
-	 * 
-	 * @param volumeRate
-	 *            音量。1倍を100%とする。
-	 */
-	void setVolumeRate(in char volumeRate);
+    /**
+     * 音量を設定する
+     * 
+     * @param volumeRate 音量。1倍を100%とする。
+     */
+    void setVolumeRate(in char volumeRate);
 
-	/**
-	 * 動作状態が変わったことを通知するコールバックを登録
-	 *
-	 * @param callback 登録するコールバック
-	 */
-	void registerBroadcastStateChangedCallback(BroadcastStateChangedCallbackInterface callback);
+    /**
+     * 動作状態が変わったことを通知するコールバックを登録
+     *
+     * @param callback 登録するコールバック
+     */
+    void registerBroadcastStateChangedCallback(BroadcastStateChangedCallbackInterface callback);
 
-	/**
-	 * 登録済みの動作状態が変わったことを通知するコールバックを削除
-	 *
-	 * @param callback 削除するコールバック
-	 */
-	void unregisterBroadcastStateChangedCallback(BroadcastStateChangedCallbackInterface callback);
+    /**
+     * 登録済みの動作状態が変わったことを通知するコールバックを削除
+     *
+     * @param callback 削除するコールバック
+     */
+    void unregisterBroadcastStateChangedCallback(BroadcastStateChangedCallbackInterface callback);
 }

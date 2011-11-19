@@ -32,178 +32,175 @@ import android.os.Parcelable;
  */
 public final class BroadcastInfo implements Parcelable {
 
-	/**
-	 * 配信設定
-	 */
-	private final BroadcastConfig mBroadcastConfig;
-	
-	/**
-	 * 配信サーバ
-	 */
-	private final String mServerName;
+    /**
+     * 配信設定
+     */
+    private final BroadcastConfig mBroadcastConfig;
 
-	/**
-	 * ポート番号
-	 */
-	private final int mServerPort;
+    /**
+     * 配信サーバ
+     */
+    private final String mServerName;
 
-	/**
-	 * コンストラクタ
-	 * 
-	 * @param broadcastConfig
-	 *            配信設定
-	 * @param serverName
-	 *            配信サーバ
-	 * @param serverPort
-	 *            ポート番号
-	 */
-	public BroadcastInfo(BroadcastConfig broadcastConfig,
-			String serverName, int serverPort) {
-		this.mBroadcastConfig = broadcastConfig;
-		this.mServerName = serverName;
-		this.mServerPort = serverPort;
-	}
+    /**
+     * ポート番号
+     */
+    private final int mServerPort;
 
-	public static final Parcelable.Creator<BroadcastInfo> CREATOR = new Parcelable.Creator<BroadcastInfo>() {
-		public BroadcastInfo createFromParcel(Parcel in) {
-			return new BroadcastInfo(in);
-		}
+    /**
+     * コンストラクタ
+     * 
+     * @param broadcastConfig 配信設定
+     * @param serverName 配信サーバ
+     * @param serverPort ポート番号
+     */
+    public BroadcastInfo(BroadcastConfig broadcastConfig,
+            String serverName, int serverPort) {
+        this.mBroadcastConfig = broadcastConfig;
+        this.mServerName = serverName;
+        this.mServerPort = serverPort;
+    }
 
-		public BroadcastInfo[] newArray(int size) {
-			return new BroadcastInfo[size];
-		}
-	};
+    public static final Parcelable.Creator<BroadcastInfo> CREATOR = new Parcelable.Creator<BroadcastInfo>() {
+        public BroadcastInfo createFromParcel(Parcel in) {
+            return new BroadcastInfo(in);
+        }
 
-	private BroadcastInfo(Parcel in) {
-		this.mBroadcastConfig = in.readParcelable(BroadcastConfig.class.getClassLoader());
-		this.mServerName = in.readString();
-		this.mServerPort = in.readInt();
-	}
+        public BroadcastInfo[] newArray(int size) {
+            return new BroadcastInfo[size];
+        }
+    };
 
-	@Override
-	public int describeContents() {
-		return 0;
-	}
+    private BroadcastInfo(Parcel in) {
+        this.mBroadcastConfig = in.readParcelable(BroadcastConfig.class.getClassLoader());
+        this.mServerName = in.readString();
+        this.mServerPort = in.readInt();
+    }
 
-	@Override
-	public void writeToParcel(Parcel dest, int flags) {
-		dest.writeParcelable(mBroadcastConfig, 0);
-		dest.writeString(mServerName);
-		dest.writeInt(mServerPort);
-	}
+    @Override
+    public int describeContents() {
+        return 0;
+    }
 
-	@Override
-	public String toString() {
-		return "BroadcastInfo [mBroadcastConfig=" + mBroadcastConfig
-				+ ", mServerName=" + mServerName + ", mServerPort="
-				+ mServerPort + "]";
-	}
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeParcelable(mBroadcastConfig, 0);
+        dest.writeString(mServerName);
+        dest.writeInt(mServerPort);
+    }
 
-	/**
-	 * ビットレート（kbps）を取得する
-	 * 
-	 * @return ビットレート（kbps）
-	 */
-	public final int getAudioBrate() {
-		return mBroadcastConfig.getAudioBrate();
-	}
+    @Override
+    public String toString() {
+        return "BroadcastInfo [mBroadcastConfig=" + mBroadcastConfig
+                + ", mServerName=" + mServerName + ", mServerPort="
+                + mServerPort + "]";
+    }
 
-	/**
-	 * 録音するチャンネル数を取得する
-	 * 
-	 * @return 録音するチャンネル数
-	 */
-	public final int getAudioChannel() {
-		return mBroadcastConfig.getAudioChannel();
-	}
+    /**
+     * ビットレート（kbps）を取得する
+     * 
+     * @return ビットレート（kbps）
+     */
+    public final int getAudioBrate() {
+        return mBroadcastConfig.getAudioBrate();
+    }
 
-	/**
-	 * 録音するサンプリングレート（Hz）を取得する
-	 * 
-	 * @return 録音するサンプリングレート（Hz）
-	 */
-	public final int getAudioSampleRate() {
-		return mBroadcastConfig.getAudioSampleRate();
-	}
-	
-	/**
-	 * エンコードの品質を取得する
-	 * 
-	 * @return エンコードの品質
-	 */
-	public final int getAudioMp3EncodeQuality() {
-		return mBroadcastConfig.getAudioMp3EncodeQuality();
-	}
+    /**
+     * 録音するチャンネル数を取得する
+     * 
+     * @return 録音するチャンネル数
+     */
+    public final int getAudioChannel() {
+        return mBroadcastConfig.getAudioChannel();
+    }
 
-	/**
-	 * DJ名を取得する
-	 * 
-	 * @return DJ名
-	 */
-	public final String getChannelDjName() {
-		return mBroadcastConfig.getChannelDjName();
-	}
+    /**
+     * 録音するサンプリングレート（Hz）を取得する
+     * 
+     * @return 録音するサンプリングレート（Hz）
+     */
+    public final int getAudioSampleRate() {
+        return mBroadcastConfig.getAudioSampleRate();
+    }
 
-	/**
-	 * タイトルを取得する
-	 * 
-	 * @return タイトル
-	 */
-	public final String getChannelTitle() {
-		return mBroadcastConfig.getChannelTitle();
-	}
+    /**
+     * エンコードの品質を取得する
+     * 
+     * @return エンコードの品質
+     */
+    public final int getAudioMp3EncodeQuality() {
+        return mBroadcastConfig.getAudioMp3EncodeQuality();
+    }
 
-	/**
-	 * 番組の説明を取得する
-	 * 
-	 * @return 番組の説明
-	 */
-	public final String getChannelDescription() {
-		return mBroadcastConfig.getChannelDescription();
-	}
+    /**
+     * DJ名を取得する
+     * 
+     * @return DJ名
+     */
+    public final String getChannelDjName() {
+        return mBroadcastConfig.getChannelDjName();
+    }
 
-	/**
-	 * 関連URLを取得する
-	 * 
-	 * @return 関連URL
-	 */
-	public final String getChannelUrl() {
-		return mBroadcastConfig.getChannelUrl();
-	}
+    /**
+     * タイトルを取得する
+     * 
+     * @return タイトル
+     */
+    public final String getChannelTitle() {
+        return mBroadcastConfig.getChannelTitle();
+    }
 
-	/**
-	 * ジャンルを取得する
-	 * 
-	 * @return ジャンル
-	 */
-	public final String getChannelGenre() {
-		return mBroadcastConfig.getChannelGenre();
-	}
+    /**
+     * 番組の説明を取得する
+     * 
+     * @return 番組の説明
+     */
+    public final String getChannelDescription() {
+        return mBroadcastConfig.getChannelDescription();
+    }
 
-	/**
-	 * マウントを取得する
-	 * 
-	 * @return マウント
-	 */
-	public final String getChannelMount() {
-		return mBroadcastConfig.getChannelMount();
-	}
+    /**
+     * 関連URLを取得する
+     * 
+     * @return 関連URL
+     */
+    public final String getChannelUrl() {
+        return mBroadcastConfig.getChannelUrl();
+    }
 
-	/**
-	 * 配信サーバを取得する
-	 * 
-	 * @return 配信サーバ
-	 */
-	public final String getServerName() {
-		return mServerName;
-	}
+    /**
+     * ジャンルを取得する
+     * 
+     * @return ジャンル
+     */
+    public final String getChannelGenre() {
+        return mBroadcastConfig.getChannelGenre();
+    }
 
-	/**
-	 * ポート番号を取得する
-	 * 
-	 * @return ポート番号
-	 */
-	public final int getServerPort() {
-		return mServerPort;
-	}
+    /**
+     * マウントを取得する
+     * 
+     * @return マウント
+     */
+    public final String getChannelMount() {
+        return mBroadcastConfig.getChannelMount();
+    }
+
+    /**
+     * 配信サーバを取得する
+     * 
+     * @return 配信サーバ
+     */
+    public final String getServerName() {
+        return mServerName;
+    }
+
+    /**
+     * ポート番号を取得する
+     * 
+     * @return ポート番号
+     */
+    public final int getServerPort() {
+        return mServerPort;
+    }
 }

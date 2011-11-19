@@ -142,6 +142,6 @@ public class C {
 	 * 
 	 * シングルトンなのでprivateとする
 	 */
-	private C() {
-	}
+    private C() {
+    }
 }

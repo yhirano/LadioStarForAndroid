@@ -34,35 +34,35 @@ import android.view.MenuItem;
  */
 public class LadioStarPreferenceActivity extends PreferenceActivity {
 
-	private final static int MENU_ID_HELP = Menu.FIRST + 1;
+    private final static int MENU_ID_HELP = Menu.FIRST + 1;
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		addPreferencesFromResource(R.xml.setting);
-	}
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        addPreferencesFromResource(R.xml.setting);
+    }
 
-	// オプションメニュー作成
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// メニューアイテムを追加
-		menu.add(Menu.NONE, MENU_ID_HELP, Menu.NONE, R.string.help);
-		return super.onCreateOptionsMenu(menu);
-	}
+    // オプションメニュー作成
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // メニューアイテムを追加
+        menu.add(Menu.NONE, MENU_ID_HELP, Menu.NONE, R.string.help);
+        return super.onCreateOptionsMenu(menu);
+    }
 
-	// オプションメニューアイテムの選択
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-		case MENU_ID_HELP: 
-			try {
-				startActivity(new Intent(Intent.ACTION_VIEW, C.HELP_SETTING_URL));
-				return false;
-			} catch (ActivityNotFoundException e) {
-				return super.onOptionsItemSelected(item);
-			}
-		default:
-			return super.onOptionsItemSelected(item);
-		}
-	}
+    // オプションメニューアイテムの選択
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case MENU_ID_HELP:
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, C.HELP_SETTING_URL));
+                    return false;
+                } catch (ActivityNotFoundException e) {
+                    return super.onOptionsItemSelected(item);
+                }
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 }
