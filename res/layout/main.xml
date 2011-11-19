@@ -1,83 +1,211 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TabHost xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:ads="http://schemas.android.com/apk/lib/com.google.ads"
-	android:id="@android:id/tabhost" android:layout_width="fill_parent"
-	android:layout_height="fill_parent">
-	<RelativeLayout android:layout_width="fill_parent"
-		android:layout_height="fill_parent">
-		<FrameLayout android:layout_width="fill_parent"
-			android:layout_height="wrap_content"
-			android:layout_alignParentBottom="true" android:id="@+id/MainButtomFrameLayout"
-			android:background="@color/main_bottom_background" android:padding="3sp">
-			<LinearLayout android:orientation="vertical"
-				android:layout_width="fill_parent" android:layout_height="wrap_content">
-				<Button android:text="@string/start" android:id="@+id/StartStopButton"
-					android:layout_width="fill_parent" android:layout_height="wrap_content" />
-			</LinearLayout>
-		</FrameLayout>
-		<LinearLayout android:orientation="vertical"
-			android:layout_width="fill_parent" android:layout_height="fill_parent"
-			android:layout_alignParentTop="true" android:layout_above="@id/MainButtomFrameLayout">
-			<TabWidget android:id="@android:id/tabs"
-				android:layout_width="fill_parent" android:layout_height="wrap_content" />
-			<FrameLayout android:id="@android:id/tabcontent"
-				android:layout_width="fill_parent" android:layout_height="fill_parent">
-				<RelativeLayout android:layout_width="fill_parent"
-					android:layout_height="fill_parent" android:id="@+id/BroadcastStatusLinearLayout"
-					android:layout_weight="1">
-					<com.google.ads.AdView android:id="@+id/MainAd"
-						android:layout_width="fill_parent" android:layout_height="wrap_content"
-						android:layout_alignParentBottom="true" ads:adUnitId="a14d75c02f46e22"
-						ads:adSize="BANNER" ads:loadAdOnCreate="true" />
-					<LinearLayout android:orientation="vertical"
-						android:layout_width="fill_parent" android:layout_height="fill_parent"
-						android:layout_alignParentTop="true" android:layout_above="@id/MainAd">
-						<LinearLayout android:orientation="vertical"
-							android:layout_width="fill_parent" android:layout_height="wrap_content">
-							<TextView android:layout_width="fill_parent"
-								android:layout_height="wrap_content" android:textAppearance="@android:style/TextAppearance.Small"
-								android:text="@string/broadcast_state" />
-							<TextView android:layout_width="fill_parent"
-								android:layout_height="wrap_content" android:textAppearance="@android:style/TextAppearance.Medium"
-								android:id="@+id/BroadcastStatusTextView" />
-						</LinearLayout>
-						<LinearLayout android:orientation="horizontal"
-							android:layout_width="fill_parent" android:layout_height="wrap_content">
-							<LinearLayout android:orientation="vertical"
-								android:layout_width="fill_parent" android:layout_height="wrap_content"
-								android:layout_weight="1">
-								<TextView android:layout_width="fill_parent"
-									android:layout_height="wrap_content" android:textAppearance="@android:style/TextAppearance.Small"
-									android:text="@string/listeners_num" />
-								<TextView android:layout_width="fill_parent"
-									android:layout_height="wrap_content" android:textAppearance="@android:style/TextAppearance.Medium"
-									android:id="@+id/ListenersNumTextView" android:text="@string/unknown_listeners_num" />
-							</LinearLayout>
-							<Button android:text="@string/update" android:id="@+id/FetchLitenersNumButton"
-								android:layout_width="wrap_content" android:layout_height="wrap_content" />
-						</LinearLayout>
-						<LinearLayout android:orientation="vertical"
-							android:layout_width="fill_parent" android:layout_height="wrap_content">
-							<LinearLayout android:orientation="horizontal"
-								android:layout_width="fill_parent" android:layout_height="wrap_content">
-								<TextView android:layout_width="fill_parent"
-									android:layout_height="wrap_content" android:layout_weight="1"
-									android:textAppearance="@android:style/TextAppearance.Small"
-									android:text="@string/volume" />
-								<TextView android:id="@+id/VolumeRateTextView"
-									android:layout_width="wrap_content" android:layout_height="wrap_content"
-									android:text="100%" />
-							</LinearLayout>
-							<SeekBar android:id="@+id/VolumeRateSeekBar"
-								android:layout_width="fill_parent" android:layout_height="wrap_content"
-								android:layout_weight="1" android:max="200" android:progress="100" />
-						</LinearLayout>
-					</LinearLayout>
-				</RelativeLayout>
-				<ListView android:layout_width="fill_parent"
-					android:layout_height="fill_parent" android:focusable="false"
-					android:id="@+id/SettingInfoListView" />
-			</FrameLayout>
-		</LinearLayout>
-	</RelativeLayout>
-</TabHost>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/lib/com.google.ads"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+    <FrameLayout
+        android:id="@+id/MainButtomFrameLayout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@color/main_bottom_background"
+        android:padding="3dp" >
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <Button
+                android:id="@+id/StartStopButton"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/start" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_above="@id/MainButtomFrameLayout"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical" >
+
+        <RelativeLayout
+            android:id="@+id/BroadcastStatusLinearLayout"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1" >
+
+            <com.google.ads.AdView
+                android:id="@+id/MainAd"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="2dp"
+                ads:adSize="BANNER"
+                ads:adUnitId="a14d75c02f46e22"
+                ads:loadAdOnCreate="true" />
+
+            <LinearLayout
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_above="@id/MainAd"
+                android:layout_alignParentTop="true"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:id="@+id/BroadcastStatusTextView"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_horizontal"
+                    android:textAppearance="@android:style/TextAppearance.Large" />
+
+                <TableLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content" >
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="3dp" >
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"
+                            android:text="@string/channel_dj_name" />
+
+                        <TextView
+                            android:id="@+id/ChannelDjTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="3dp" >
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"
+                            android:text="@string/channel_title" />
+
+                        <TextView
+                            android:id="@+id/ChannelTitleTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="3dp" >
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"
+                            android:text="@string/channel_genre" />
+
+                        <TextView
+                            android:id="@+id/ChannelGenreTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="3dp" >
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"
+                            android:text="@string/channel_description" />
+
+                        <TextView
+                            android:id="@+id/ChannelDescriptionTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </TableRow>
+
+                    <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="3dp" >
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"
+                            android:text="@string/channel_mount" />
+
+                        <TextView
+                            android:id="@+id/ChannelMountTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </TableRow>
+
+                        <TableRow
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="3dp" >
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"
+                            android:text="@string/listeners_num" />
+
+                        <TextView
+                            android:id="@+id/ListenersNumTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </TableRow>
+                </TableLayout>
+
+                <LinearLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" >
+
+                    <LinearLayout
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" >
+
+                        <TextView
+                            android:layout_width="fill_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/volume"
+                            android:textAppearance="@android:style/TextAppearance.Small" />
+
+                        <TextView
+                            android:id="@+id/VolumeRateTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100%" />
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/VolumeRateSeekBar"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:max="200"
+                        android:progress="100" />
+                </LinearLayout>
+            </LinearLayout>
+        </RelativeLayout>
+    </LinearLayout>
+
+</RelativeLayout>

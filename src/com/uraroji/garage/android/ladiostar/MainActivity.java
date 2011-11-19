@@ -25,7 +25,6 @@ package com.uraroji.garage.android.ladiostar;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -37,13 +36,13 @@ import com.uraroji.garage.android.netladiolib.Channel;
 import com.uraroji.garage.android.netladiolib.Headline;
 import com.uraroji.garage.android.netladiolib.HeadlineManager;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.app.TabActivity;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -54,25 +53,24 @@ import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.TabHost;
 import android.widget.TextView;
-import android.widget.TabHost.TabSpec;
 
 /**
  * メイン画面
  */
-public class MainActivity extends TabActivity {
+public class MainActivity extends Activity {
+
+	/**
+	 * 設定情報
+	 */
+	private SharedPreferences mPref;
 
 	private final static int MENU_ID_REFERENCE_SITE = Menu.FIRST + 1;
 
@@ -84,9 +82,7 @@ public class MainActivity extends TabActivity {
 	
 	private Button mStartStopButton;
 
-	private SettingInfoAdapter mSettingInfoAdapter;
-	
-	/*
+	/**
 	 * 配信の開始時、停止時にメッセージやダイアログを表示するためのHandler
 	 */
 	private final Handler mBroadcastWatchHandler = new Handler() {
@@ -129,7 +125,7 @@ public class MainActivity extends TabActivity {
 		}
 	};
 	
-	/*
+	/**
 	 * 配信の開始時、停止時にメッセージやダイアログを表示するためのHandler
 	 */
 	private final Handler mServiceWatchHandler = new Handler() {
@@ -161,6 +157,11 @@ public class MainActivity extends TabActivity {
 		}
 	};
 
+	/**
+	 * 自動でリスナー数を取得
+	 */
+	private final BroadcastListenerFetcher mBroadcastListenerFetcher = new BroadcastListenerFetcher();
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -200,27 +201,25 @@ public class MainActivity extends TabActivity {
 			VoiceSender.setUserAgentInfo(appName, appVersion);
 		}
 		
-		// 未設定項目をデフォルトの設定で埋める
-		setDefaultSetting();
-
-		// TabHostを取得
-		final TabHost tabHost = getTabHost();
-
-		// 配信状況タブの作成
-		TabSpec bloadcastStatusTab = tabHost.newTabSpec("BroadcastStatusTab");
-		bloadcastStatusTab.setIndicator(getString(R.string.broadcast_state));
-		bloadcastStatusTab.setContent(R.id.BroadcastStatusLinearLayout);
-		tabHost.addTab(bloadcastStatusTab);
-
-		// 配信情報タブの作成
-		TabSpec bloadcastInfoTab = tabHost.newTabSpec("BroadcastInfoTab");
-		bloadcastInfoTab.setIndicator(getString(R.string.broadcast_info));
-		bloadcastInfoTab.setContent(R.id.SettingInfoListView);
-		tabHost.addTab(bloadcastInfoTab);
-
-		ListView settingInfoListView = (ListView) findViewById(R.id.SettingInfoListView);
-		mSettingInfoAdapter = new SettingInfoAdapter(this);
-		settingInfoListView.setAdapter(mSettingInfoAdapter);
+		// 設定情報
+		{
+			// 設定情報を取得
+			 mPref = PreferenceManager
+						.getDefaultSharedPreferences(getApplicationContext());
+			 
+			// 設定が変更された場合に場合に、設定情報の表示を更新する
+			mPref.registerOnSharedPreferenceChangeListener(new OnSharedPreferenceChangeListener() {
+				
+				@Override
+				public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+						String key) {
+					invalidateBroadcastSetting();
+				}
+			});
+			
+			// 未設定項目をデフォルトの設定で埋める
+			setDefaultSetting();
+		}
 
 		mBroadcastStatusTextView = (TextView) findViewById(R.id.BroadcastStatusTextView);
 		
@@ -240,110 +239,6 @@ public class MainActivity extends TabActivity {
 				case VoiceSender.BROADCAST_STATE_STOPPING:
 				default:
 					break;
-				}
-			}
-		});
-		
-		final TextView listenersNumTextView = (TextView)findViewById(R.id.ListenersNumTextView);
-		
-		final Button fetchLitenersNumButton = (Button) findViewById(R.id.FetchLitenersNumButton);
-		fetchLitenersNumButton.setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				final BroadcastInfo broadcastingInfo = BroadcastManager
-						.getConnector().getBroadcastInfo(); // 配信中の情報を取得する
-
-				// 配信中の場合
-				if (broadcastingInfo != null
-						&& BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_BROADCASTING) {
-
-					fetchLitenersNumButton.setEnabled(false); // 更新ボタンを押せないようにする
-					fetchLitenersNumButton.setText(R.string.updating); // 更新中の表示にする
-					new Thread() {
-
-						/**
-						 * ヘッドライン取得
-						 */
-						private static final int MSG_FETCHED_HEADLINE = 0;
-
-						/**
-						 * ヘッドライン取得失敗
-						 */
-						private static final int MSG_ERROR_FETCH_HEADLINE = 1;
-						
-						@Override
-						public void run() {
-							Headline headline = HeadlineManager.getHeadline();
-							try {
-								headline.fecthHeadline(); // ヘッドライン取得
-								// ヘッドラインから番組の再生URLと同じURLを持つ番組を探す
-								Channel channel = headline.getChannel(Channel.createPlayUrl(
-										broadcastingInfo.getServerName(),
-										broadcastingInfo.getServerPort(),
-										broadcastingInfo.getChannelMount())); // URLと同じ番組を探す
-
-								// ヘッドライン取得
-								if (channel != null) {
-									Message msg = mmHandler.obtainMessage(MSG_FETCHED_HEADLINE, channel);
-									msg.sendToTarget();
-								} 
-								// 該当するURLが存在しない
-								else {
-									mmHandler.sendEmptyMessage(MSG_ERROR_FETCH_HEADLINE);
-								}
-							} catch (IOException e) {
-								// 取得失敗
-								mmHandler.sendEmptyMessage(MSG_ERROR_FETCH_HEADLINE);
-							}
-							
-							headline.clearChannels(); // ヘッドライン情報は必要無いのでクリア
-						}
-
-						private Handler mmHandler = new Handler() {
-							
-							@Override
-							public void handleMessage(Message msg) {
-								switch (msg.what) {
-								case MSG_FETCHED_HEADLINE:
-									Channel channel = (Channel) msg.obj;
-									if (channel != null) {
-										listenersNumTextView.setText(String
-												.format("%s %d / %s %d / %s %d",
-														getString(R.string.listeners_num),
-														channel.getCln(),
-														getString(R.string.max_listeners_num),
-														channel.getMax(),
-														getString(R.string.total_listeners_num),
-														channel.getClns()));
-									} else {
-										listenersNumTextView
-												.setText(R.string.unknown_listeners_num);
-									}
-									break;
-								case MSG_ERROR_FETCH_HEADLINE:
-									listenersNumTextView
-											.setText(R.string.unknown_listeners_num);
-									break;
-								default:
-									Log.w(C.TAG, "Unknown received message "
-											+ msg.what
-											+ " when fetch listeners num.");
-									listenersNumTextView
-											.setText(R.string.unknown_listeners_num);
-									break;
-								}
-								
-								fetchLitenersNumButton.setText(R.string.update); // 更新の表示にする
-								fetchLitenersNumButton.setEnabled(true); // 更新ボタンを押せるようにする
-							}
-						};
-					}.start();
-				}
-				// 配信中でない場合
-				else {
-					listenersNumTextView
-							.setText(R.string.unknown_listeners_num);
 				}
 			}
 		});
@@ -409,6 +304,9 @@ public class MainActivity extends TabActivity {
 				.addBroadcastStateChangedHandler(mBroadcastWatchHandler);
 		BroadcastManager.getConnector()
 				.addServiceConnectChangeHandler(mServiceWatchHandler);
+		
+		// リスナー数の取得開始
+		mBroadcastListenerFetcher.start();
 	}
 
 	@Override
@@ -418,7 +316,8 @@ public class MainActivity extends TabActivity {
 		// 前回バグで強制終了した場合はダイアログ表示
 		AppUncaughtExceptionHandler.showBugReportDialogIfExist();
 		
-		mSettingInfoAdapter.update();
+		// 配信情報の表示を表示する
+		invalidateBroadcastSetting();
 	}
 
 	@Override
@@ -430,6 +329,9 @@ public class MainActivity extends TabActivity {
 				.removeBroadcastStateChangedHandler(mBroadcastWatchHandler);
 		BroadcastManager.getConnector()
 				.removeServiceConnectChangeHandler(mServiceWatchHandler);
+
+		// リスナー数の取得終了
+		mBroadcastListenerFetcher.shutdown();
 
 		switchViewAsBroadcastState();
 		BroadcastManager.getConnector().release();
@@ -495,35 +397,33 @@ public class MainActivity extends TabActivity {
 	 * 設定値の入っていない設定項目に対してデフォルトの設定値を入れる
 	 */
 	private void setDefaultSetting() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		SharedPreferences.Editor prefEditor = pref.edit();
+		SharedPreferences.Editor prefEditor = mPref.edit();
 
-		String djName = pref.getString("channel_dj_name", "");
+		String djName = mPref.getString("channel_dj_name", "");
 		if (djName.length() == 0) {
 			prefEditor.putString("channel_dj_name",
 					getString(R.string.anonymous_dj_name));
 		}
 
-		String title = pref.getString("channel_title", "");
+		String title = mPref.getString("channel_title", "");
 		if (title.length() == 0) {
 			prefEditor.putString("channel_title",
 					getString(R.string.anonymous_title));
 		}
 
-		String description = pref.getString("channel_description", "");
+		String description = mPref.getString("channel_description", "");
 		if (description.length() == 0) {
 			prefEditor.putString("channel_description",
 					getString(R.string.anonymous_description));
 		}
 
-		String genre = pref.getString("channel_genre", "");
+		String genre = mPref.getString("channel_genre", "");
 		if (genre.length() == 0) {
 			prefEditor.putString("channel_genre",
 					getString(R.string.anonymous_genre));
 		}
 
-		String mount = pref.getString("channel_mount", "");
+		String mount = mPref.getString("channel_mount", "");
 		if ((mount.length() == 0) || (mount.length() == 1 && mount.charAt(0) == '/')) {
 			prefEditor.putString("channel_mount",
 					"/" + RandomStringUtils.randomAlphabetic(14));
@@ -531,30 +431,30 @@ public class MainActivity extends TabActivity {
 			prefEditor.putString("channel_mount", "/" + mount);
 		}
 
-		String server = pref.getString("channel_server", "");
+		String server = mPref.getString("channel_server", "");
 		if (server.length() == 0) {
 			prefEditor.putString("channel_server", "");
 		}
 
-		String bitrate = pref.getString("audio_bitrate", "");
+		String bitrate = mPref.getString("audio_bitrate", "");
 		if (bitrate.length() == 0) {
 			prefEditor.putString("audio_bitrate",
 					String.valueOf(C.DEFAULT_AUDIO_BITRATE));
 		}
 
-		String channel = pref.getString("audio_channel", "");
+		String channel = mPref.getString("audio_channel", "");
 		if (channel.length() == 0) {
 			prefEditor.putString("audio_channel",
 					String.valueOf(C.DEFAULT_AUDIO_CHANNEL));
 		}
 
-		String sampleRate = pref.getString("audio_sample_rate", "");
+		String sampleRate = mPref.getString("audio_sample_rate", "");
 		if (sampleRate.length() == 0) {
 			prefEditor.putString("audio_sample_rate",
 					String.valueOf(C.DEFAULT_AUDIO_SAMPLE_RATE));
 		}
 
-		String mp3EncodeQuality = pref.getString("audio_mp3_encode_quality", "");
+		String mp3EncodeQuality = mPref.getString("audio_mp3_encode_quality", "");
 		if (mp3EncodeQuality.length() == 0) {
 			prefEditor.putString("audio_mp3_encode_quality",
 					String.valueOf(C.DEFAULT_AUDIO_MP3_ENCODE_QUALITY));
@@ -569,15 +469,13 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「DJ名」
 	 */
 	private String getSettingChannelDjName() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("channel_dj_name", getString(R.string.anonymous_dj_name));
+		String result = mPref.getString("channel_dj_name", getString(R.string.anonymous_dj_name));
 		if (result.length() == 0) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.putString("channel_dj_name",
 					getString(R.string.anonymous_dj_name));
 			prefEditor.commit();
-			result = pref.getString("channel_dj_name", getString(R.string.anonymous_dj_name));
+			result = mPref.getString("channel_dj_name", getString(R.string.anonymous_dj_name));
 		}
 		return result;
 	}
@@ -588,16 +486,14 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「タイトル」
 	 */
 	private String getSettingChannelTitle() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("channel_title",
+		String result = mPref.getString("channel_title",
 				getString(R.string.anonymous_title));
 		if (result.length() == 0) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.putString("channel_title",
 					getString(R.string.anonymous_title));
 			prefEditor.commit();
-			result = pref.getString("channel_title",
+			result = mPref.getString("channel_title",
 					getString(R.string.anonymous_title));
 		}
 		return result;
@@ -609,16 +505,14 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「番組の説明」
 	 */
 	private String getSettingChannelDescription() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("channel_description",
+		String result = mPref.getString("channel_description",
 				getString(R.string.anonymous_description));
 		if (result.length() == 0) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.putString("channel_description",
 					getString(R.string.anonymous_description));
 			prefEditor.commit();
-			result = pref.getString("channel_description",
+			result = mPref.getString("channel_description",
 					getString(R.string.anonymous_description));
 		}
 		return result;
@@ -630,9 +524,7 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「関連URL」
 	 */
 	private String getSettingChannelUrl() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("channel_url", "");
+		String result = mPref.getString("channel_url", "");
 		
 		// 関連URLが空の場合は、そのまま空の文字列を返す
 		if (result.length() == 0) {
@@ -642,10 +534,10 @@ public class MainActivity extends TabActivity {
 		else {
 			// 関連URLがURLとして不正な場合
 			if (isValidHttpUrl(result) == false) {
-				SharedPreferences.Editor prefEditor = pref.edit();
+				SharedPreferences.Editor prefEditor = mPref.edit();
 				prefEditor.putString("channel_url", "");
 				prefEditor.commit();
-				result = pref.getString("channel_url", "");
+				result = mPref.getString("channel_url", "");
 			}
 			
 			return result;
@@ -684,16 +576,14 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「ジャンル」
 	 */
 	private String getSettingChannelGenre() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("channel_genre",
+		String result = mPref.getString("channel_genre",
 				getString(R.string.anonymous_genre));
 		if (result.length() == 0) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.putString("channel_genre",
 					getString(R.string.anonymous_genre));
 			prefEditor.commit();
-			result = pref.getString("channel_genre",
+			result = mPref.getString("channel_genre",
 					getString(R.string.anonymous_genre));
 		}
 		return result;
@@ -705,20 +595,18 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「マウント名」
 	 */
 	private String getSettingChannelMount() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("channel_mount", "");
+		String result = mPref.getString("channel_mount", "");
 		if ((result.length() == 0) || (result.length() == 1 && result.charAt(0) == '/')) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.putString("channel_mount",
 					"/" + RandomStringUtils.randomAlphabetic(14));
 			prefEditor.commit();
-			result = pref.getString("channel_mount", "");
+			result = mPref.getString("channel_mount", "");
 		} else if (result.length() != 0 && result.charAt(0) != '/') {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.putString("channel_mount", "/" + result);
 			prefEditor.commit();
-			result = pref.getString("channel_mount", "");
+			result = mPref.getString("channel_mount", "");
 		}
 
 		return result;
@@ -730,9 +618,7 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「配信サーバ」
 	 */
 	private String getSettingChannelServer() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		return pref.getString("channel_server", "");
+		return mPref.getString("channel_server", "");
 	}
 
 	/**
@@ -741,14 +627,12 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「ビットレート」
 	 */
 	private int getSettingAudioBitrate() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("audio_bitrate",
+		String result = mPref.getString("audio_bitrate",
 				String.valueOf(C.DEFAULT_AUDIO_BITRATE));
 		try {
 			return Integer.parseInt(result);
 		} catch (NumberFormatException e) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.remove("audio_bitrate");
 			prefEditor.commit();
 			return C.DEFAULT_AUDIO_BITRATE;
@@ -761,14 +645,12 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「モノラル・ステレオ」
 	 */
 	private int getSettingAudioChannel() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("audio_channel",
+		String result = mPref.getString("audio_channel",
 				String.valueOf(C.DEFAULT_AUDIO_CHANNEL));
 		try {
 			return Integer.parseInt(result);
 		} catch (NumberFormatException e) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.remove("audio_channel");
 			prefEditor.commit();
 			return C.DEFAULT_AUDIO_CHANNEL;
@@ -781,14 +663,12 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「サンプリングレート」
 	 */
 	private int getSettingAudioSampleRate() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("audio_sample_rate",
+		String result = mPref.getString("audio_sample_rate",
 				String.valueOf(C.DEFAULT_AUDIO_SAMPLE_RATE));
 		try {
 			return Integer.parseInt(result);
 		} catch (NumberFormatException e) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.remove("audio_sample_rate");
 			prefEditor.commit();
 			return C.DEFAULT_AUDIO_SAMPLE_RATE;
@@ -801,18 +681,36 @@ public class MainActivity extends TabActivity {
 	 * @return 設定値「エンコード品質」
 	 */
 	private int getSettingAudioMp3EncodeQuarity() {
-		SharedPreferences pref = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		String result = pref.getString("audio_mp3_encode_quality",
+		String result = mPref.getString("audio_mp3_encode_quality",
 				String.valueOf(C.DEFAULT_AUDIO_MP3_ENCODE_QUALITY));
 		try {
 			return Integer.parseInt(result);
 		} catch (NumberFormatException e) {
-			SharedPreferences.Editor prefEditor = pref.edit();
+			SharedPreferences.Editor prefEditor = mPref.edit();
 			prefEditor.remove("audio_mp3_encode_quality");
 			prefEditor.commit();
 			return C.DEFAULT_AUDIO_MP3_ENCODE_QUALITY;
 		}
+	}
+	
+	/**
+	 * 設定情報の表示を更新する
+	 */
+	private void invalidateBroadcastSetting() {
+		final TextView djNameTextView = (TextView)findViewById(R.id.ChannelDjTextView);
+		djNameTextView.setText(getSettingChannelDjName());
+
+		final TextView titleTextView = (TextView)findViewById(R.id.ChannelTitleTextView);
+		titleTextView.setText(getSettingChannelTitle());
+
+		final TextView genreTextView = (TextView)findViewById(R.id.ChannelGenreTextView);
+		genreTextView.setText(getSettingChannelGenre());
+
+		final TextView descriptionTextView = (TextView)findViewById(R.id.ChannelDescriptionTextView);
+		descriptionTextView.setText(getSettingChannelDescription());
+
+		final TextView mountTextView = (TextView)findViewById(R.id.ChannelMountTextView);
+		mountTextView.setText(getSettingChannelMount());
 	}
 	
 	/**
@@ -1023,226 +921,147 @@ public class MainActivity extends TabActivity {
 			break;
 		}
 	}
-
-	/**
-	 * チャンネル数を文字列で取得する
-	 * 
-	 * @param chs
-	 *            チャンネル数
-	 * @return チャンネル数の文字列
-	 */
-	private String getChsString(int chs) {
-		switch (chs) {
-		case 1:
-			return getString(R.string.mono);
-		case 2:
-			return getString(R.string.stereo);
-		default:
-			return String.valueOf(chs);
-		}
-	}
-
-	/**
-	 * エンコード品質の説明を取得する
-	 * 
-	 * @param mp3EncQuality
-	 *            エンコード品質。0〜9で指定する。
-	 * @return エンコード品質の説明
-	 */
-	private String getMp3EncQualityString(int mp3EncQuality) {
-		switch (mp3EncQuality) {
-		case 0:
-			return getString(R.string.audio_mp3_encode_quality_q0);
-		case 1:
-			return getString(R.string.audio_mp3_encode_quality_q1);
-		case 2:
-			return getString(R.string.audio_mp3_encode_quality_q2);
-		case 3:
-			return getString(R.string.audio_mp3_encode_quality_q3);
-		case 4:
-			return getString(R.string.audio_mp3_encode_quality_q4);
-		case 5:
-			return getString(R.string.audio_mp3_encode_quality_q5);
-		case 6:
-			return getString(R.string.audio_mp3_encode_quality_q6);
-		case 7:
-			return getString(R.string.audio_mp3_encode_quality_q7);
-		case 8:
-			return getString(R.string.audio_mp3_encode_quality_q8);
-		case 9:
-			return getString(R.string.audio_mp3_encode_quality_q9);
-		default:
-			return getString(R.string.unknown) + "(" + String.valueOf(mp3EncQuality) + ")";
-		}
-	}
 	
-	private class SettingInfoAdapter extends BaseAdapter {
-
-		private LayoutInflater mInflater;
-
-		/**
-		 * 設定名と設定内容の組み合わせ
-		 * 
-		 * ["Title", "今日からラジオ"]といった組み合わせを格納する。
-		 */
-		private class SettingInfo {
-
-			/**
-			 * キー
-			 */
-			/*package*/ String title;
-
-			/**
-			 * 内容
-			 */
-			/*package*/ String value;
-
-			/**
-			 * コンストラクタ
-			 * 
-			 * @param title
-			 *            キー
-			 * @param value
-			 *            内容
-			 */
-			public SettingInfo(String title, String value) {
-				this.title = title;
-				this.value = value;
-			}
-		}
+	/**
+	 * 一定時間ごとに自動でリスナー数を取得するクラス
+	 */
+	private class BroadcastListenerFetcher {
 
 		/**
-		 * 表示内容のリスト
+		 * ヘッドライン取得
 		 */
-		private ArrayList<SettingInfo> mInfoList = new ArrayList<SettingInfo>();
+		private static final int MSG_FETCHED_HEADLINE = 0;
 
 		/**
-		 * コンストラクタ
-		 * 
-		 * @param context
-		 *            コンテキスト
+		 * ヘッドライン取得失敗
 		 */
-		public SettingInfoAdapter(Context context) {
-			super();
-
-			this.mInflater = LayoutInflater.from(context);
-
-			generateSettingInfoList();
-		}
-
-		private void generateSettingInfoList() {
-			mInfoList.clear();
-			addInfoList(R.string.channel_dj_name, getSettingChannelDjName());
-			addInfoList(R.string.channel_title, getSettingChannelTitle());
-			addInfoList(R.string.channel_description, getSettingChannelDescription());
-			addInfoList(R.string.channel_url, getSettingChannelUrl());
-			addInfoList(R.string.channel_genre, getSettingChannelGenre());
-			addInfoList(R.string.channel_mount, getSettingChannelMount());
-			{
-				String server = getSettingChannelServer();
-				if (server.length() == 0) {
-					server = getString(R.string.auto);
-				}
-				addInfoList(R.string.channel_server, server);
-			}
-			addInfoList(R.string.audio_bitrate, getSettingAudioBitrate() + "kbps");
-			addInfoList(R.string.audio_channel, getChsString(getSettingAudioChannel()));
-			addInfoList(R.string.audio_sample_rate, String.valueOf(getSettingAudioSampleRate()) + "Hz");
-			addInfoList(R.string.audio_mp3_encode_quality, getMp3EncQualityString(getSettingAudioMp3EncodeQuarity()));
-		}
+		private static final int MSG_ERROR_FETCH_HEADLINE = 1;
 
 		/**
-		 * 指定したキーと内容を表示内容に追加する
-		 * 
-		 * @param titleId
-		 *            キーの文字列ID
-		 * @param value
-		 *            内容
+		 * リスナー数取得した後に次回リスナー数の取得を開始するまでの秒数
 		 */
-		private void addInfoList(int titleId, String value) {
-			if (value != null && value.length() != 0) {
-				mInfoList.add(new SettingInfo(getString(titleId), value));
-			}
-		}
+		private static final int DELAY = 30;
+		
+		private final ScheduledExecutorService mmScheduler = Executors
+				.newSingleThreadScheduledExecutor();
 
-		@Override
-		public int getCount() {
-			// 広告 + 番組
-			return mInfoList.size() + 1;
-		}
-
-		@Override
-		public Object getItem(int position) {
-			// 使用しないのでnullを返す
-			return null;
-		}
-
-		@Override
-		public long getItemId(int position) {
-			// 使用しないのでpositionを返す
-			return position;
-		}
-
-		@Override
-		public View getView(int position, View convertView, ViewGroup parent) {
-			View view = convertView;
+		private final Runnable mmFetchListenerTask = new Runnable() {
 			
-			if (position == 0) {
-				/*
-				 * convertView.getTagで何かが入っている場合、番組の表示で使用されたconvertViewだと思われるので、
-				 * AdMob表示用に改めてconvertViewを作成する。
-				 */
-				if (view == null || view.getTag() != null) {
-					view = mInflater.inflate(R.layout.ad_item_row, null);
-					view.setTag(null);
-				}
-			} else {
-				ViewHolder holder = null;
+			@Override
+			public void run() {
+				final BroadcastInfo broadcastingInfo = BroadcastManager
+						.getConnector().getBroadcastInfo(); // 配信中の情報を取得する
 
-				/*
-				 * convertView.getTagで何も入っていない場合、AdMobの表示で使用されたconvertViewだと思われるので、
-				 * 番組表示用に改めてconvertViewを作成する。
-				 */
-				if (view == null || view.getTag() == null) {
-					view = mInflater.inflate(R.layout.setting_info_item_row,
-							null);
+				// 配信中でない場合
+				if (broadcastingInfo == null
+						|| BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
+					if (C.LOCAL_LOG) {
+						Log.v(C.TAG, "Failed fetch listeners num because not broadcasting.");
+					}
+
+					mmHandler.sendEmptyMessage(MSG_ERROR_FETCH_HEADLINE);
+
+					// 30秒後に再びリスナー数を取得する
+					mmScheduler.schedule(this, DELAY, TimeUnit.SECONDS);
+					return;
 				}
 				
-				holder = (ViewHolder) view.getTag();
+				// ヘッドライン
+				Headline headline = HeadlineManager.getHeadline();
+				
+				try {
+					if (C.LOCAL_LOG) {
+						Log.v(C.TAG, "Start fetching listeners num.");
+					}
+					
+					headline.fecthHeadline(); // ヘッドライン取得
+					// ヘッドラインから番組の再生URLと同じURLを持つ番組を探す
+					Channel channel = headline.getChannel(Channel
+							.createPlayUrl(broadcastingInfo.getServerName(),
+									broadcastingInfo.getServerPort(),
+									broadcastingInfo.getChannelMount())); // URLと同じ番組を探す
 
-				if (holder == null) {
-					holder = new ViewHolder();
-					holder.infoTitleTextView = (TextView) view
-							.findViewById(R.id.InfoTitleTextView);
-					holder.infoValueTextView = (TextView) view
-							.findViewById(R.id.InfoValueTextView);
+					// ヘッドライン取得
+					if (channel != null) {
+						if (C.LOCAL_LOG) {
+							Log.v(C.TAG, "Success fetch listeners num.");
+						}
+						
+						Message msg = mmHandler.obtainMessage(
+								MSG_FETCHED_HEADLINE, channel);
+						msg.sendToTarget();
+					}
+					// 該当するURLが存在しない
+					else {
+						if (C.LOCAL_LOG) {
+							Log.v(C.TAG, "Success fetch listeners num, but not found.");
+						}
 
-					view.setTag(holder);
+						mmHandler.sendEmptyMessage(MSG_ERROR_FETCH_HEADLINE);
+					}
+				} catch (IOException e) {
+					if (C.LOCAL_LOG) {
+						Log.v(C.TAG, "Failed fetch listeners num.");
+					}
+
+					// 取得失敗
+					mmHandler.sendEmptyMessage(MSG_ERROR_FETCH_HEADLINE);
 				}
 
-				holder.infoTitleTextView
-						.setText(mInfoList.get(position - 1).title);
-				holder.infoValueTextView
-						.setText(mInfoList.get(position - 1).value);
+				headline.clearChannels(); // ヘッドライン情報は必要無いのでクリア
+				
+				// 30秒後に再びリスナー数を取得する
+				mmScheduler.schedule(this, DELAY, TimeUnit.SECONDS);
 			}
-
-			return view;
-		}
-
-		/**
-		 * 設定内容を更新する
-		 */
-		public void update() {
-			generateSettingInfoList();
-			notifyDataSetChanged();
-		}
+		};
 		
-		/**
-		 * ChannelInfoAdapter#getViewにおけるViewの保持クラス
-		 */
-		private class ViewHolder {
-			/*package*/ TextView infoTitleTextView;
-			/*package*/ TextView infoValueTextView;
+		private final Handler mmHandler = new Handler() {
+
+			@Override
+			public void handleMessage(Message msg) {
+				TextView listenersNumTextView = (TextView)findViewById(R.id.ListenersNumTextView);
+				if (listenersNumTextView == null) {
+					return;
+				}
+				
+				switch (msg.what) {
+				case MSG_FETCHED_HEADLINE:
+					Channel channel = (Channel) msg.obj;
+					if (channel != null) {
+						listenersNumTextView.setText(String
+								.format("%s %d / %s %d / %s %d",
+										getString(R.string.listeners_num),
+										channel.getCln(),
+										getString(R.string.max_listeners_num),
+										channel.getMax(),
+										getString(R.string.total_listeners_num),
+										channel.getClns()));
+					} else {
+						listenersNumTextView
+								.setText(R.string.unknown_listeners_num);
+					}
+					break;
+				case MSG_ERROR_FETCH_HEADLINE:
+					listenersNumTextView
+							.setText(R.string.unknown_listeners_num);
+					break;
+				default:
+					Log.w(C.TAG, "Unknown received message "
+							+ msg.what
+							+ " when fetch listeners num.");
+					listenersNumTextView
+							.setText(R.string.unknown_listeners_num);
+					break;
+				}
+			}
+		};
+
+		public void start() {
+			mmScheduler.schedule(mmFetchListenerTask, 0, TimeUnit.SECONDS);
+		}
+
+		public void shutdown() {
+			mmScheduler.shutdown();
 		}
 	}
 }
