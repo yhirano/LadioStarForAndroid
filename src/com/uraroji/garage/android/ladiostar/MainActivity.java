@@ -53,8 +53,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
-import android.telephony.PhoneStateListener;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -69,7 +67,6 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TabHost;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.TabHost.TabSpec;
 
 /**
@@ -90,35 +87,9 @@ public class MainActivity extends TabActivity {
 	private SettingInfoAdapter mSettingInfoAdapter;
 	
 	/*
-	 * 着信時に配信を停止するために着信を感知するためのTelephonyManager。
-	 * サービスで配信する場合は、サービス側で着信を感知するためこのTelephonyManagerは使用しない（nullのまま）。
-	 */
-	private TelephonyManager mTelephonyManager;
-	
-	/*
-	 * 着信時に配信を停止するためのPhoneStateListener。
-	 * サービスで配信する場合は、サービス側で着信を感知するためこのPhoneStateListenerは使用しない（nullのまま）。
-	 */
-	private final PhoneStateListener mPhoneStateListener = (C.BROADCAST_AT_SERVICE) ? null
-			: (new PhoneStateListener() {
-				
-				@Override
-				public void onCallStateChanged(int state, String number) {
-					switch (state) {
-					case TelephonyManager.CALL_STATE_RINGING: // 着信時
-						Log.d(C.TAG, "Stop because the ringing.");
-						stop(); // 配信終了
-						break;
-					default:
-						break;
-					}
-				}
-			});
-	
-	/*
 	 * 配信の開始時、停止時にメッセージやダイアログを表示するためのHandler
 	 */
-	private final Handler mBroadcastWatchHandler = (C.BROADCAST_AT_SERVICE) ? (new Handler() {
+	private final Handler mBroadcastWatchHandler = new Handler() {
 
 		@Override
 		public void handleMessage(Message msg) {
@@ -127,16 +98,16 @@ public class MainActivity extends TabActivity {
 			 * サービスに接続できなかった場合のメッセージを表示する。
 			 */
 			switch (msg.what) {
-			case BroadcastAtService.MSG_CONNECTED_SERVICE:
+			case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
 				break;
-			case BroadcastAtService.MSG_ERROR_START_SERVICE_CONNECTION:
+			case BroadcastServiceConnector.MSG_ERROR_START_SERVICE_CONNECTION:
 				switchViewAsBroadcastState();
 				(new AlertDialog.Builder(MainActivity.this))
 						.setMessage(R.string.disable_rec_start)
 						.setPositiveButton(R.string.close, null).create()
 						.show();
 				break;
-			case BroadcastAtService.MSG_ERROR_STOP_SERVICE_CONNECTION:
+			case BroadcastServiceConnector.MSG_ERROR_STOP_SERVICE_CONNECTION:
 				switchViewAsBroadcastState();
 				(new AlertDialog.Builder(MainActivity.this))
 						.setMessage(R.string.failed_rec_stop)
@@ -176,140 +147,7 @@ public class MainActivity extends TabActivity {
 				break;
 			}
 		}
-	}) : (new Handler() {
-
-		@Override
-		public void handleMessage(Message msg) {
-			switch (msg.what) {
-			case BroadcastAtService.MSG_CONNECTED_SERVICE:
-				break;
-			case BroadcastAtService.MSG_ERROR_START_SERVICE_CONNECTION:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_rec_start, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case BroadcastAtService.MSG_ERROR_STOP_SERVICE_CONNECTION:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.failed_rec_stop, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_rec_start_change_channel_or_sample, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_REC_START:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_rec_start, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_REC_STARTED:
-				break;
-			case VoiceSender.MSG_ERROR_AUDIO_RECORD:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_rec, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_PCM_BUFFER_OVERFLOW:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.encode_too_slow, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ENCODE_STARTED:
-				break;
-			case VoiceSender.MSG_ERROR_AUDIO_ENCODE:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_encode, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_MP3_BUFFER_OVERFLOW:
-			case VoiceSender.MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST:
-			case VoiceSender.MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.send_data_too_slow, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server_authentication_required, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server_mountpoint_in_use, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server_mountpoint_too_long, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server_content_type_not_supported, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server_too_many_sources_connected, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server_unknown_error, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_ERROR_SEND_HEADER_DATA:
-			case VoiceSender.MSG_ERROR_RECV_HEADER_RESPONSE:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disable_connect_server, Toast.LENGTH_LONG)
-						.show();
-				break;
-			case VoiceSender.MSG_SEND_STREAM_STARTED:
-			case VoiceSender.MSG_SEND_STREAM_ENDED:
-			case VoiceSender.MSG_RECONNECT_STARTED:
-			case VoiceSender.MSG_STOP_WAIT_RECONNECT:
-				switchViewAsBroadcastState();
-				break;
-			case VoiceSender.MSG_ERROR_SEND_STREAM_DATA:
-				switchViewAsBroadcastState();
-				Toast.makeText(MainActivity.this,
-						R.string.disconnected_server, Toast.LENGTH_LONG)
-						.show();
-				break;
-			default:
-				Log.w(C.TAG, "Unknown received message " + msg.what + " when start.");
-				break;
-			}
-		}
-	});
+	};
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -321,39 +159,38 @@ public class MainActivity extends TabActivity {
 				this));
 
 		/*
-		 * サービスで配信する場合は、サービスに接続した直後にボタン類の書き換えを行う。
+		 * サービスに接続した直後にボタン類の書き換えを行う。
 		 * サービスに接続するまでは配信中かどうかを確認できないため、ボタン類の書き換えができない。
 		 * よって、サービス接続直後にボタン類の書き換えを行う。
 		 */
-		if (C.BROADCAST_AT_SERVICE) {
-			BroadcastManager.addBroadcastStateChangedHandler(new Handler() {
+		BroadcastManager.getConnector().addBroadcastStateChangedHandler(
+				new Handler() {
 
-				@Override
-				public void handleMessage(Message msg) {
-					switch (msg.what) {
-					case BroadcastAtService.MSG_CONNECTED_SERVICE:
-						switchViewAsBroadcastState();
-						/*
-						 * サービスは1度起動したら、配信されていない状態でアプリを終了しない限り
-						 * 停止しない。
-						 * よって、1度サービスを起動してしまえば配信中かどうかを取得できるため、
-						 * サービス接続通知によるボタン類書き換えは必要なくなるので、
-						 * サービス接続通知の受信をする必要が無い。
-						 */
-						BroadcastManager
-								.removeBroadcastStateChangedHandler(this);
-						break;
-					default:
-						Log.w(C.TAG, "Unknown received message " + msg.what
-								+ " when watch service connection.");
-						break;
-					}
+			@Override
+			public void handleMessage(Message msg) {
+				switch (msg.what) {
+				case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
+					switchViewAsBroadcastState();
+					/*
+					 * サービスは1度起動したら、配信されていない状態でアプリを終了しない限り
+					 * 停止しない。
+					 * よって、1度サービスを起動してしまえば配信中かどうかを取得できるため、
+					 * サービス接続通知によるボタン類書き換えは必要なくなるので、
+					 * サービス接続通知の受信をする必要が無い。
+					 */
+							BroadcastManager.getConnector()
+									.removeBroadcastStateChangedHandler(this);
+					break;
+				default:
+					Log.w(C.TAG, "Unknown received message " + msg.what
+							+ " when watch service connection.");
+					break;
 				}
-			});
-		}
+			}
+		});
 		
 		// VoiceSenderManager初期化
-		BroadcastManager.init(getApplicationContext());
+		BroadcastManager.getConnector().init(getApplicationContext());
 
 		// アプリ名とバージョン名をVoiceSenderに設定する
 		{
@@ -411,7 +248,7 @@ public class MainActivity extends TabActivity {
 			
 			@Override
 			public void onClick(View v) {
-				switch (BroadcastManager.getBroadcastState()) {
+				switch (BroadcastManager.getConnector().getBroadcastState()) {
 				case VoiceSender.BROADCAST_STATE_STOPPED:
 					start();
 					break;
@@ -434,11 +271,11 @@ public class MainActivity extends TabActivity {
 			@Override
 			public void onClick(View v) {
 				final BroadcastInfo broadcastingInfo = BroadcastManager
-						.getBroadcastInfo(); // 配信中の情報を取得する
+						.getConnector().getBroadcastInfo(); // 配信中の情報を取得する
 
 				// 配信中の場合
 				if (broadcastingInfo != null
-						&& BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_BROADCASTING) {
+						&& BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_BROADCASTING) {
 
 					fetchLitenersNumButton.setEnabled(false); // 更新ボタンを押せないようにする
 					fetchLitenersNumButton.setText(R.string.updating); // 更新中の表示にする
@@ -549,62 +386,46 @@ public class MainActivity extends TabActivity {
 			public void onProgressChanged(SeekBar seekBar, int progress,
 					boolean fromUser) {
 				volumeRateTextView.setText(String.valueOf(progress) + "%");
-				BroadcastManager.setVolumeRate((char)progress);
+						BroadcastManager.getConnector().setVolumeRate(
+								(char) progress);
 			}
 		});
 		
 		/*
-		 * サービスで配信する場合は、サービスに接続した直後にボタン類の書き換えを行う。
+		 * サービスに接続した直後にボタン類の書き換えを行う。
 		 * サービスに接続するまでは配信中かどうかを確認できないため、ボタン類の書き換えができない。
 		 * よって、サービス接続直後にボタン類の書き換えを行う。
 		 */
-		if (C.BROADCAST_AT_SERVICE) {
-			BroadcastManager.addBroadcastStateChangedHandler(new Handler() {
+		BroadcastManager.getConnector().addBroadcastStateChangedHandler(
+				new Handler() {
 
-				@Override
-				public void handleMessage(Message msg) {
-					switch (msg.what) {
-					case BroadcastAtService.MSG_CONNECTED_SERVICE:
-						switchViewAsBroadcastState();
-						volumeRateSeekbar.setProgress(BroadcastManager.getVolumeRate());
-						/*
-						 * サービスは1度起動したら、配信されていない状態でアプリを終了しない限り
-						 * 停止しない。
-						 * よって、1度サービスを起動してしまえば音量を取得できるため、
-						 * サービス接続通知による音量取得は必要なくなるので、
-						 * サービス接続通知の受信をする必要が無い。
-						 */
-						BroadcastManager
-								.removeBroadcastStateChangedHandler(this);
-						break;
-					default:
-						Log.w(C.TAG, "Unknown received message " + msg.what
-								+ " when watch service connection.");
-						break;
-					}
+			@Override
+			public void handleMessage(Message msg) {
+				switch (msg.what) {
+				case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
+					switchViewAsBroadcastState();
+					volumeRateSeekbar.setProgress(BroadcastManager.getConnector().getVolumeRate());
+					/*
+					 * サービスは1度起動したら、配信されていない状態でアプリを終了しない限り
+					 * 停止しない。
+					 * よって、1度サービスを起動してしまえば音量を取得できるため、
+					 * サービス接続通知による音量取得は必要なくなるので、
+					 * サービス接続通知の受信をする必要が無い。
+					 */
+					BroadcastManager.getConnector()
+							.removeBroadcastStateChangedHandler(this);
+					break;
+				default:
+					Log.w(C.TAG, "Unknown received message " + msg.what
+							+ " when watch service connection.");
+					break;
 				}
-			});
-		}
+			}
+		});
 
 		// 配信開始後にメッセージやダイアログを表示するために、BoladcastManagerにHandlerを設定する。
-		BroadcastManager
+		BroadcastManager.getConnector()
 				.addBroadcastStateChangedHandler(mBroadcastWatchHandler);
-		
-		// ローカルで配信する場合には、このアクティビティで着信を感知し、着信時に配信を終了する
-		if (!C.BROADCAST_AT_SERVICE) {
-			mTelephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-			mTelephonyManager.listen(mPhoneStateListener,
-					PhoneStateListener.LISTEN_CALL_STATE);
-		}
-		
-		/*
-		 * サービスの場合にボタン類を書き換えないのは、onCreateやonStartの
-		 * 最中にはサービスに接続できないため。
-		 * http://d.hatena.ne.jp/Kazzz/20100630/p1
-		 */
-		if(!C.BROADCAST_AT_SERVICE){
-			switchViewAsBroadcastState();
-		}
 	}
 
 	@Override
@@ -621,18 +442,12 @@ public class MainActivity extends TabActivity {
 	protected void onDestroy() {
 		super.onDestroy();
 
-		// 着信の感知をしないようにする
-		if (!C.BROADCAST_AT_SERVICE) {
-			mTelephonyManager.listen(mPhoneStateListener,
-					PhoneStateListener.LISTEN_NONE);
-		}
-		
 		// 配信開始後にメッセージ・ダイアログを表示するための設定済みHandlerを削除する
-		BroadcastManager
+		BroadcastManager.getConnector()
 				.removeBroadcastStateChangedHandler(mBroadcastWatchHandler);
 
 		switchViewAsBroadcastState();
-		BroadcastManager.release();
+		BroadcastManager.getConnector().release();
 	}
 
 	// オプションメニュー作成
@@ -653,7 +468,7 @@ public class MainActivity extends TabActivity {
 		// 関連サイトが存在する場合にのみ有効にする
 		menu.findItem(MENU_ID_REFERENCE_SITE).setEnabled(getSettingChannelUrl().length() != 0);
 		// 配信中は設定を無効にする
-		menu.findItem(MENU_ID_SETTING).setEnabled(BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED);
+		menu.findItem(MENU_ID_SETTING).setEnabled(BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED);
 		
 		return super.onPrepareOptionsMenu(menu);
 	}
@@ -679,7 +494,7 @@ public class MainActivity extends TabActivity {
 				return super.onOptionsItemSelected(item);
 			}
 		case MENU_ID_SETTING:
-			if (BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
+			if (BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
 				startActivity(new Intent(this,
 						LadioStarPreferenceActivity.class));
 				return false;
@@ -1019,7 +834,7 @@ public class MainActivity extends TabActivity {
 	 * 放送を開始する
 	 */
 	private void start() {
-		if (BroadcastManager.getBroadcastState() != VoiceSender.BROADCAST_STATE_STOPPED) {
+		if (BroadcastManager.getConnector().getBroadcastState() != VoiceSender.BROADCAST_STATE_STOPPED) {
 			return;
 		}
 
@@ -1067,7 +882,7 @@ public class MainActivity extends TabActivity {
 						 * このHandlerは接続中のプログレスダイアログを消すだけなので、
 						 * 接続中のプログレスダイアログを消したらこのHandlerは必要なくなるので削除
 						 */
-						BroadcastManager
+						BroadcastManager.getConnector()
 								.removeBroadcastStateChangedHandler(this);
 						loadingDialogDismissScheduler.shutdown();
 					}
@@ -1082,7 +897,7 @@ public class MainActivity extends TabActivity {
 				}
 			}
 		};
-		BroadcastManager.addBroadcastStateChangedHandler(broadcastStateHandler);
+		BroadcastManager.getConnector().addBroadcastStateChangedHandler(broadcastStateHandler);
 		
 		// 接続開始後、一定時間接続が開始しない場合にはダイアログを閉じる
 		final Handler switchViewHandler = new Handler(){
@@ -1099,7 +914,7 @@ public class MainActivity extends TabActivity {
 			public void run() {
 				synchronized (loadingDialogLock) {
 					loadingDialog.dismiss();
-					BroadcastManager
+					BroadcastManager.getConnector()
 							.removeBroadcastStateChangedHandler(broadcastStateHandler);
 					loadingDialogDismissScheduler.shutdown();
 				}
@@ -1109,7 +924,7 @@ public class MainActivity extends TabActivity {
 		loadingDialogDismissScheduler.schedule(runnable,
 				C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA + 3, TimeUnit.SECONDS);
 
-		BroadcastManager.start(new BroadcastConfig(getSettingAudioBitrate(),
+		BroadcastManager.getConnector().start(new BroadcastConfig(getSettingAudioBitrate(),
 				getSettingAudioChannel(), getSettingAudioSampleRate(),
 				getSettingAudioMp3EncodeQuarity(), getSettingChannelDjName(),
 				getSettingChannelTitle(), getSettingChannelDescription(),
@@ -1121,8 +936,8 @@ public class MainActivity extends TabActivity {
 	 * 放送を中止する
 	 */
 	private void stop() {
-		if (BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING
-				|| BroadcastManager.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
+		if (BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING
+				|| BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
 			return;
 		}
 
@@ -1135,7 +950,7 @@ public class MainActivity extends TabActivity {
 		/*
 		 * 配信停止後にプログレスダイアログを消し、ボタンなどの内容を変えるための、BoladcastManagerにHandlerを設定する
 		 */
-		BroadcastManager.addBroadcastStateChangedHandler(new Handler() {
+		BroadcastManager.getConnector().addBroadcastStateChangedHandler(new Handler() {
 
 			@Override
 			public void handleMessage(Message msg) {
@@ -1164,9 +979,9 @@ public class MainActivity extends TabActivity {
 					// プログレスダイアログを消すだけ。メッセージの表示は別のHandlerで表示している。
 					loadingDialog.dismiss();
 					switchViewAsBroadcastState();
-					BroadcastManager.removeBroadcastStateChangedHandler(this);
+					BroadcastManager.getConnector().removeBroadcastStateChangedHandler(this);
 					break;
-				case BroadcastAtService.MSG_ERROR_STOP_SERVICE_CONNECTION:
+				case BroadcastServiceConnector.MSG_ERROR_STOP_SERVICE_CONNECTION:
 					loadingDialog.dismiss();
 					switchViewAsBroadcastState();
 					(new AlertDialog.Builder(MainActivity.this))
@@ -1186,14 +1001,14 @@ public class MainActivity extends TabActivity {
 				}
 			}
 		});
-		BroadcastManager.stop();
+		BroadcastManager.getConnector().stop();
 	}
 
 	/**
 	 * 配信状態に応じて、ボタンのテキストなどを切り替える
 	 */
 	private void switchViewAsBroadcastState() {
-		switch (BroadcastManager.getBroadcastState()) {
+		switch (BroadcastManager.getConnector().getBroadcastState()) {
 		case VoiceSender.BROADCAST_STATE_CONNECTING:
 			mBroadcastStatusTextView.setText(R.string.connecting);
 			mStartStopButton.setText(R.string.stop);

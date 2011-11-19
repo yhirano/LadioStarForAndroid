@@ -36,7 +36,7 @@ import android.util.Log;
 /**
  * サービスで配信する際の配信サービスとの通信クラス
  */
-public class BroadcastAtService implements BroadcastInterface {
+public class BroadcastServiceConnector {
 
 	/**
 	 * サービスに接続した
@@ -47,7 +47,7 @@ public class BroadcastAtService implements BroadcastInterface {
 	 * サービスへの接続に失敗したため配信を開始できない
 	 * 
 	 * エラーがあった場合、このメッセージは
-	 * {@link BroadcastAtService#start(int, int, int, int, String, String, String, String, String, String, String, String)}
+	 * {@link BroadcastServiceConnector#start(int, int, int, int, String, String, String, String, String, String, String, String)}
 	 * で再生が開始できない場合にのみ発行される。
 	 */
 	public static final int MSG_ERROR_START_SERVICE_CONNECTION = 101;
@@ -79,7 +79,14 @@ public class BroadcastAtService implements BroadcastInterface {
 	 */
 	private final Object mHandlerListLock = new Object();
 
-	@Override
+	/**
+	 * 初期化
+	 * 
+	 * 一番はじめに配信をする前に初期化すること
+	 * 
+	 * @param context
+	 *            コンテキスト。アプリケーションのコンテキストを渡すこと。
+	 */
 	public void init(Context context) {
 		this.mContext = context;
 
@@ -89,7 +96,12 @@ public class BroadcastAtService implements BroadcastInterface {
 				Context.BIND_AUTO_CREATE);
 	}
 
-	@Override
+	/**
+	 * 配信を開始する
+	 * 
+	 * @param broadcastConfig
+	 *            配信設定
+	 */
 	public void start(BroadcastConfig broadcastConfig) {
 		if (C.LOCAL_LOG) {
 			Log.v(C.TAG, "Trying to start.");
@@ -108,7 +120,9 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 配信を停止する
+	 */
 	public void stop() {
 		if (C.LOCAL_LOG) {
 			Log.v(C.TAG, "Trying to stop.");
@@ -127,7 +141,9 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 配信に使用したリソースを解放する。 アプリケーションの終了時などにリソースを解放すること。
+	 */
 	public void release() {
 		if (C.LOCAL_LOG) {
 			Log.v(C.TAG, "Release VoiceSender resouce.");
@@ -141,7 +157,14 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 配信状態取得すする
+	 * 
+	 * @see VoiceSender#BROADCAST_STATE_STOPPED
+	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
+	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
+	 * @see VoiceSender#BROADCAST_STATE_STOPPING
+	 */
 	public int getBroadcastState() {
 		try {
 			if (mBroadcastServiceInterface != null) {
@@ -159,7 +182,12 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 配信情報を取得する
+	 * 
+	 * @return 配信中の番組の情報。<br />
+	 *         配信中でない場合はnull。
+	 */
 	public BroadcastInfo getBroadcastInfo() {
 		try {
 			if (mBroadcastServiceInterface != null) {
@@ -177,7 +205,11 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 音量を取得する
+	 * 
+	 * @return 音量。1倍を100%とする。
+	 */
 	public char getVolumeRate() {
 		try {
 			if (mBroadcastServiceInterface != null) {
@@ -194,7 +226,12 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 音量を設定する
+	 * 
+	 * @param volumeRate
+	 *            音量。1倍を100%とする。
+	 */
 	public void setVolumeRate(char volumeRate) {
 		try {
 			if (mBroadcastServiceInterface != null) {
@@ -209,7 +246,43 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 動作の状態変化を通知するハンドラを追加する
+	 * 
+	 * 動作状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
+	 * 
+	 * @param handler
+	 *            動作の状態変化を通知するハンドラ
+	 * 
+	 * @see BroadcastServiceConnector#MSG_CONNECTED_SERVICE
+	 * @see BroadcastServiceConnector#MSG_ERROR_START_SERVICE_CONNECTION
+	 * @see BroadcastServiceConnector#MSG_ERROR_STOP_SERVICE_CONNECTION
+	 * @see VoiceSender#MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS
+	 * @see VoiceSender#MSG_ERROR_REC_START
+	 * @see VoiceSender#MSG_REC_STARTED
+	 * @see VoiceSender#MSG_ERROR_AUDIO_RECORD
+	 * @see VoiceSender#MSG_ERROR_PCM_BUFFER_OVERFLOW
+	 * @see VoiceSender#MSG_ENCODE_STARTED
+	 * @see VoiceSender#MSG_ERROR_AUDIO_ENCODE
+	 * @see VoiceSender#MSG_ERROR_MP3_BUFFER_OVERFLOW
+	 * @see VoiceSender#MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST
+	 * @see VoiceSender#MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER
+	 * @see VoiceSender#MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER
+	 * @see VoiceSender#MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA
+	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED
+	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE
+	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG
+	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED
+	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED
+	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR
+	 * @see VoiceSender#MSG_ERROR_SEND_HEADER_DATA
+	 * @see VoiceSender#MSG_ERROR_RECV_HEADER_RESPONSE
+	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
+	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
+	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
+	 * @see VoiceSender#MSG_RECONNECT_STARTED
+	 * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
+	 */
 	public void addBroadcastStateChangedHandler(Handler handler) {
 		synchronized (mHandlerListLock) {
 			if (handler != null) {
@@ -218,14 +291,23 @@ public class BroadcastAtService implements BroadcastInterface {
 		}
 	}
 
-	@Override
+	/**
+	 * 動作の状態変化を通知するハンドラを削除する
+	 * 
+	 * @param handler
+	 *            動作の状態変化を通知するハンドラ
+	 */
 	public void removeBroadcastStateChangedHandler(Handler handler) {
 		synchronized (mHandlerListLock) {
 			mHandlerList.remove(handler);
 		}
 	}
 
-	@Override
+	/**
+	 * 登録されたハンドラにメッセージを送信する
+	 * 
+	 * @param what
+	 */
 	public void clearBroadcastStateChangedHandler() {
 		synchronized (mHandlerListLock) {
 			mHandlerList.clear();

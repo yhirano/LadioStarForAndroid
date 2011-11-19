@@ -22,9 +22,6 @@
 
 package com.uraroji.garage.android.ladiostar;
 
-import android.content.Context;
-import android.os.Handler;
-
 /**
  * マイクから取得した音声をMP3変換し、サーバに送信する処理（録音と配信）を管理する
  * 
@@ -33,10 +30,9 @@ import android.os.Handler;
 public class BroadcastManager {
 
 	/**
-	 * 配信の実行モジュール
+	 * 配信サービスとのコネクタ
 	 */
-	private static BroadcastInterface mBroadcastModule = ((C.BROADCAST_AT_SERVICE) ? new BroadcastAtService()
-			: new BroadcastAtLocal());
+	private static BroadcastServiceConnector mBroadcastServiceConnector = new BroadcastServiceConnector();
 
 	/**
 	 * コンストラクタ
@@ -47,137 +43,11 @@ public class BroadcastManager {
 	}
 
 	/**
-	 * 初期化
+	 * 配信サービスとのコネクタを取得する
 	 * 
-	 * 一番はじめに配信をする前に初期化すること
-	 * 
-	 * @param context
-	 *            コンテキスト。アプリケーションのコンテキストを渡すこと。
+	 * @return 配信サービスとのコネクタ
 	 */
-	public static void init(Context context) {
-		mBroadcastModule.init(context);
-	}
-
-	/**
-	 * 配信を開始する
-	 * 
-	 * @param broadcastConfig
-	 *            配信設定
-	 */
-	public static void start(BroadcastConfig broadcastConfig) {
-		mBroadcastModule.start(broadcastConfig);
-	}
-
-	/**
-	 * 配信を停止する
-	 */
-	public static void stop() {
-		mBroadcastModule.stop();
-	}
-
-	/**
-	 * 配信に使用したリソースを解放する。 アプリケーションの終了時などにリソースを解放すること。
-	 */
-	public static void release() {
-		mBroadcastModule.release();
-	}
-
-	/**
-	 * 配信状態取得すする
-	 * 
-	 * @see VoiceSender#BROADCAST_STATE_STOPPED
-	 * @see VoiceSender#BROADCAST_STATE_CONNECTING
-	 * @see VoiceSender#BROADCAST_STATE_BROADCASTING
-	 * @see VoiceSender#BROADCAST_STATE_STOPPING
-	 */
-	public static int getBroadcastState() {
-		return mBroadcastModule.getBroadcastState();
-	}
-
-	/**
-	 * 配信情報を取得する
-	 * 
-	 * @return 配信中の番組の情報。<br />
-	 *         配信中でない場合はnull。
-	 */
-	public static BroadcastInfo getBroadcastInfo() {
-		return mBroadcastModule.getBroadcastInfo();
-	}
-
-	/**
-	 * 音量を取得する
-	 * 
-	 * @return 音量。1倍を100%とする。
-	 */
-	public static char getVolumeRate() {
-		return mBroadcastModule.getVolumeRate();
-	}
-
-	/**
-	 * 音量を設定する
-	 * 
-	 * @param volumeRate
-	 *            音量。1倍を100%とする。
-	 */
-	public static void setVolumeRate(char volumeRate){
-		mBroadcastModule.setVolumeRate(volumeRate);
-	}
-	
-	/**
-	 * 動作の状態変化を通知するハンドラを追加する
-	 * 
-	 * 動作状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
-	 * 
-	 * @param handler
-	 *            動作の状態変化を通知するハンドラ
-	 * 
-	 * @see BroadcastAtService#MSG_CONNECTED_SERVICE
-	 * @see BroadcastAtService#MSG_ERROR_START_SERVICE_CONNECTION
-	 * @see BroadcastAtService#MSG_ERROR_STOP_SERVICE_CONNECTION
-	 * @see VoiceSender#MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS
-	 * @see VoiceSender#MSG_ERROR_REC_START
-	 * @see VoiceSender#MSG_REC_STARTED
-	 * @see VoiceSender#MSG_ERROR_AUDIO_RECORD
-	 * @see VoiceSender#MSG_ERROR_PCM_BUFFER_OVERFLOW
-	 * @see VoiceSender#MSG_ENCODE_STARTED
-	 * @see VoiceSender#MSG_ERROR_AUDIO_ENCODE
-	 * @see VoiceSender#MSG_ERROR_MP3_BUFFER_OVERFLOW
-	 * @see VoiceSender#MSG_ERROR_FETCH_NET_LADIO_SERVER_LIST
-	 * @see VoiceSender#MSG_ERROR_NOT_FOUND_NET_LADIO_BROADCAST_SERVER
-	 * @see VoiceSender#MSG_ERROR_CREATE_SOCKET_TO_NET_LADIO_SERVER
-	 * @see VoiceSender#MSG_ERROR_INTERRUPTED_WAIT_FROM_REC_START_TO_SEND_DATA
-	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED
-	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE
-	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG
-	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED
-	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED
-	 * @see VoiceSender#MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR
-	 * @see VoiceSender#MSG_ERROR_SEND_HEADER_DATA
-	 * @see VoiceSender#MSG_ERROR_RECV_HEADER_RESPONSE
-	 * @see VoiceSender#MSG_SEND_STREAM_STARTED
-	 * @see VoiceSender#MSG_ERROR_SEND_STREAM_DATA
-	 * @see VoiceSender#MSG_SEND_STREAM_ENDED
-	 * @see VoiceSender#MSG_RECONNECT_STARTED
-	 * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
-	 */
-	public static void addBroadcastStateChangedHandler(Handler handler) {
-		mBroadcastModule.addBroadcastStateChangedHandler(handler);
-	}
-
-	/**
-	 * 動作の状態変化を通知するハンドラを削除する
-	 * 
-	 * @param handler
-	 *            動作の状態変化を通知するハンドラ
-	 */
-	public static void removeBroadcastStateChangedHandler(Handler handler) {
-		mBroadcastModule.removeBroadcastStateChangedHandler(handler);
-	}
-
-	/**
-	 * 動作の状態変化を通知するハンドラをクリアする
-	 */
-	public static void clearBroadcastStateChangedHandler() {
-		mBroadcastModule.clearBroadcastStateChangedHandler();
+	public static BroadcastServiceConnector getConnector() {
+		return mBroadcastServiceConnector;
 	}
 }

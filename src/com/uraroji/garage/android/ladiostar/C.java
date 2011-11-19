@@ -87,13 +87,6 @@ public class C {
 	public static final boolean LOCAL_LOG = false;
 
 	/**
-	 * 配信をサービスで行うか
-	 * 
-	 * サービスで行う場合、LadioStarが終了しても配信を継続する
-	 */
-	public static final boolean BROADCAST_AT_SERVICE = true;
-
-	/**
 	 * PCMバッファに最大何秒分のデータをためこむかを指定する。
 	 * 
 	 * PCMバッファとは、録音したデータをいったんため込んでおくためのバッファである。<br />
