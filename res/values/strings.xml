@@ -40,7 +40,7 @@
     <string name="audio_mp3_encode_quality_q2">高い</string>
     <string name="audio_mp3_encode_quality_q3">高め</string>
     <string name="audio_mp3_encode_quality_q4">やや高め</string>
-    <string name="audio_mp3_encode_quality_q5">並</string>
+    <string name="audio_mp3_encode_quality_q5">標準</string>
     <string name="audio_mp3_encode_quality_q6">やや低め</string>
     <string name="audio_mp3_encode_quality_q7">低め</string>
     <string name="audio_mp3_encode_quality_q8">低い</string>
