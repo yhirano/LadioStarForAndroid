@@ -94,7 +94,7 @@ public class BroadcastAtLocal implements BroadcastInterface {
 								.format(mContext
 										.getString(R.string.broadcasting_notification_title_format),
 										broadcastingInfo.getChannelTitle());
-						Notification n = new Notification(R.drawable.icon,
+						Notification n = new Notification(R.drawable.ic_launcher,
 								notificationTitle, System.currentTimeMillis());
 						Intent intent = new Intent(mContext, MainActivity.class);
 						PendingIntent contentIntent = PendingIntent.getActivity(

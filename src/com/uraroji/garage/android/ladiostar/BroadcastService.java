@@ -222,7 +222,7 @@ public class BroadcastService extends Service {
 								BroadcastService.this
 										.getString(R.string.broadcasting_notification_title_format),
 								broadcastingInfo.getChannelTitle());
-						Notification n = new Notification(R.drawable.icon,
+						Notification n = new Notification(R.drawable.ic_launcher,
 								notificationTitle, System.currentTimeMillis());
 						Intent intent = new Intent(BroadcastService.this,
 								MainActivity.class);
