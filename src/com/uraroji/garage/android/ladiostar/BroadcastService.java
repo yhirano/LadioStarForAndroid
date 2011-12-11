@@ -45,10 +45,15 @@ public class BroadcastService extends Service {
      */
     private VoiceSender mVoiceSender = new VoiceSender();
 
-    // 着信時に配信を停止するために着信を感知するためのTelephonyManager
+    /**
+     * 着信時に配信を停止するために着信を感知するためのTelephonyManager
+     */
     private TelephonyManager mTelephonyManager;
 
-    private PhoneStateListener mPhoneStateListener = new PhoneStateListener() {
+    /**
+     * 着信時に配信を停止するために着信を感知するためのPhoneStateListener
+     */
+    private final PhoneStateListener mPhoneStateListener = new PhoneStateListener() {
 
         @Override
         public void onCallStateChanged(int state, String number) {
@@ -72,6 +77,16 @@ public class BroadcastService extends Service {
 
             @Override
             public void handleMessage(Message msg) {
+                // 受け取ったメッセージにあわせてToastを表示する
+                showToastMessage(msg);
+            }
+
+            /**
+             * {@link VoiceSender} から受け取ったメッセージにあわせてToastを表示する
+             * 
+             * @param msg メッセージ
+             */
+            private void showToastMessage(Message msg) {
                 switch (msg.what) {
                     case VoiceSender.MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS:
                         Toast.makeText(
@@ -176,69 +191,85 @@ public class BroadcastService extends Service {
             @Override
             public void handleMessage(Message msg) {
                 // コールバックを実行する
-                {
-                    final int n = broadcastStateChangedCallbackList
-                            .beginBroadcast();
-
-                    for (int i = 0; i < n; ++i) {
-                        final BroadcastStateChangedCallbackInterface callback = broadcastStateChangedCallbackList
-                                .getBroadcastItem(i);
-                        if (callback != null) {
-                            try {
-                                callback.changed(msg.what);
-                            } catch (RemoteException e) {
-                                // 例外はどうしようもないので無視しておく
-                                Log.w(C.TAG,
-                                        "RemoteException("
-                                                + e.toString() + ") occurred.");
-                            }
-                        }
-                    }
-
-                    broadcastStateChangedCallbackList.finishBroadcast();
-                }
+                execCallback(msg);
 
                 // Notificationを更新する
-                {
-                    // 配信情報を取得する
-                    final BroadcastInfo broadcastingInfo = mVoiceSender
-                            .getBroadcastInfo();
+                updateNotification();
+            }
 
-                    NotificationManager nm = (NotificationManager) BroadcastService.this
-                            .getSystemService(Context.NOTIFICATION_SERVICE);
+            /**
+             * コールバックを実行する。
+             * 
+             * @param msg メッセージ
+             */
+            private void execCallback(Message msg) {
+                final int n = broadcastStateChangedCallbackList
+                        .beginBroadcast();
 
-                    /*
-                     * 配信中でもbroadcastingInfoが取得できないこともある（配信開始直後）ので、
-                     * broadcastingInfoがnullであるかもチェックする。
-                     */
-                    if ((mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING || mVoiceSender
-                            .getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED)
-                            || broadcastingInfo == null) {
-                        // Notificationを消す
-                        nm.cancel(C.NOTIFICATION_ID);
-                    } else {
-                        // Notificationを表示する
-                        final String notificationTitle = String.format(
-                                BroadcastService.this
-                                        .getString(R.string.broadcasting_notification_title_format),
-                                broadcastingInfo.getChannelTitle());
-                        Notification n = new Notification(R.drawable.ic_launcher,
-                                notificationTitle, System.currentTimeMillis());
-                        Intent intent = new Intent(BroadcastService.this,
-                                MainActivity.class);
-                        PendingIntent contentIntent = PendingIntent
-                                .getActivity(BroadcastService.this, 0, intent,
-                                        Intent.FLAG_ACTIVITY_NEW_TASK);
-                        n.setLatestEventInfo(
-                                BroadcastService.this,
-                                notificationTitle,
-                                String.valueOf(broadcastingInfo.getAudioBrate())
-                                        + "kbps/"
-                                        + getChsString(broadcastingInfo
-                                                .getAudioChannel()),
-                                contentIntent);
-                        nm.notify(C.NOTIFICATION_ID, n);
+                for (int i = 0; i < n; ++i) {
+                    final BroadcastStateChangedCallbackInterface callback = broadcastStateChangedCallbackList
+                            .getBroadcastItem(i);
+                    if (callback != null) {
+                        try {
+                            callback.changed(msg.what);
+                        } catch (RemoteException e) {
+                            // 例外はどうしようもないので無視しておく
+                            Log.w(C.TAG,
+                                    "RemoteException("
+                                            + e.toString() + ") occurred.");
+                        }
                     }
+                }
+
+                broadcastStateChangedCallbackList.finishBroadcast();
+            }
+
+            /**
+             * Notificationを更新する
+             */
+            private void updateNotification() {
+                // 配信情報を取得する
+                final BroadcastInfo broadcastingInfo = mVoiceSender
+                        .getBroadcastInfo();
+
+                NotificationManager nm = (NotificationManager) BroadcastService.this
+                        .getSystemService(Context.NOTIFICATION_SERVICE);
+
+                /*
+                 * 配信中で無い場合はNotificationを消す。
+                 * 
+                 * 配信中でもbroadcastingInfoが取得できないこともある（配信開始直後）ので、
+                 * broadcastingInfoがnullであるかもチェックする。
+                 */
+                if ((mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING || mVoiceSender
+                        .getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED)
+                        || broadcastingInfo == null) {
+                    // Notificationを消す
+                    nm.cancel(C.NOTIFICATION_ID);
+                }
+                // 配信中の場合はNotification表示する
+                else {
+                    // Notificationを表示する
+                    final String notificationTitle = String.format(
+                            BroadcastService.this
+                                    .getString(R.string.broadcasting_notification_title_format),
+                            broadcastingInfo.getChannelTitle());
+                    Notification n = new Notification(R.drawable.ic_launcher,
+                            notificationTitle, System.currentTimeMillis());
+                    Intent intent = new Intent(BroadcastService.this,
+                            MainActivity.class);
+                    PendingIntent contentIntent = PendingIntent
+                            .getActivity(BroadcastService.this, 0, intent,
+                                    Intent.FLAG_ACTIVITY_NEW_TASK);
+                    n.setLatestEventInfo(
+                            BroadcastService.this,
+                            notificationTitle,
+                            String.valueOf(broadcastingInfo.getAudioBrate())
+                                    + "kbps/"
+                                    + getChsString(broadcastingInfo
+                                            .getAudioChannel()),
+                            contentIntent);
+                    nm.notify(C.NOTIFICATION_ID, n);
                 }
             }
         });
@@ -294,7 +325,6 @@ public class BroadcastService extends Service {
         public void start(BroadcastConfig broadcastConfig)
                 throws RemoteException {
             mVoiceSender.start(broadcastConfig);
-
         }
 
         @Override

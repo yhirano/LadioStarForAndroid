@@ -166,6 +166,8 @@ public class BroadcastServiceConnector {
     /**
      * 配信状態取得すする
      * 
+     * @return 配信状態
+     * 
      * @see VoiceSender#BROADCAST_STATE_STOPPED
      * @see VoiceSender#BROADCAST_STATE_CONNECTING
      * @see VoiceSender#BROADCAST_STATE_BROADCASTING
@@ -255,6 +257,7 @@ public class BroadcastServiceConnector {
      * 配信の状態変化を通知するハンドラを追加する 配信状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
      * 
      * @param handler 動作の状態変化を通知するハンドラ
+     * 
      * @see VoiceSender#MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS
      * @see VoiceSender#MSG_ERROR_REC_START
      * @see VoiceSender#MSG_REC_STARTED
@@ -338,6 +341,7 @@ public class BroadcastServiceConnector {
      * 配信の状態変化を通知するハンドラを追加する 配信状態が変わった際には、Handlerのwhatに変更後の状態が格納される。
      * 
      * @param handler 動作の状態変化を通知するハンドラ
+     * 
      * @see BroadcastServiceConnector#MSG_CONNECTED_SERVICE
      * @see BroadcastServiceConnector#MSG_ERROR_START_SERVICE_CONNECTION
      * @see BroadcastServiceConnector#MSG_ERROR_STOP_SERVICE_CONNECTION

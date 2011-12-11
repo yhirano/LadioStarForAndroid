@@ -131,6 +131,11 @@ public class C {
 	public static final int WAIT_SEC_FROM_REC_START_TO_SEND_DATA = 5; 
 	
 	/**
+	 * リスナー数取得した後に次回リスナー数の取得を開始するまでの秒数
+	 */
+	public static final int LISTENER_FETCH_INTERVAL_SEC = 30;
+	
+	/**
 	 * NotificationのID
 	 * 
 	 * ユニークなIDを取得するために、R.layout.mainのリソースIDを使う

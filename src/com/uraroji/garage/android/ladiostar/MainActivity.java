@@ -940,11 +940,6 @@ public class MainActivity extends Activity {
          */
         private static final int MSG_ERROR_FETCH_HEADLINE = 1;
 
-        /**
-         * リスナー数取得した後に次回リスナー数の取得を開始するまでの秒数
-         */
-        private static final int DELAY = 30;
-
         private final ScheduledExecutorService mmScheduler = Executors
                 .newSingleThreadScheduledExecutor();
 
@@ -964,8 +959,8 @@ public class MainActivity extends Activity {
 
                     mmHandler.sendEmptyMessage(MSG_ERROR_FETCH_HEADLINE);
 
-                    // 30秒後に再びリスナー数を取得する
-                    mmScheduler.schedule(this, DELAY, TimeUnit.SECONDS);
+                    // 指定秒数後に再びリスナー数を取得する
+                    mmScheduler.schedule(this, C.LISTENER_FETCH_INTERVAL_SEC, TimeUnit.SECONDS);
                     return;
                 }
 
@@ -1013,11 +1008,14 @@ public class MainActivity extends Activity {
 
                 headline.clearChannels(); // ヘッドライン情報は必要無いのでクリア
 
-                // 30秒後に再びリスナー数を取得する
-                mmScheduler.schedule(this, DELAY, TimeUnit.SECONDS);
+                // 指定秒数後に再びリスナー数を取得する
+                mmScheduler.schedule(this, C.LISTENER_FETCH_INTERVAL_SEC, TimeUnit.SECONDS);
             }
         };
 
+        /**
+         * リスナー数を取得した後の処理Handler
+         */
         private final Handler mmHandler = new Handler() {
 
             @Override
@@ -1029,7 +1027,7 @@ public class MainActivity extends Activity {
 
                 switch (msg.what) {
                     case MSG_FETCHED_HEADLINE:
-                        Channel channel = (Channel) msg.obj;
+                        final Channel channel = (Channel) msg.obj;
                         if (channel != null) {
                             listenersNumTextView.setText(String
                                     .format("%s %d / %s %d / %s %d",
@@ -1059,10 +1057,16 @@ public class MainActivity extends Activity {
             }
         };
 
+        /**
+         * リスナー数の取得を開始する
+         */
         public void start() {
             mmScheduler.schedule(mmFetchListenerTask, 0, TimeUnit.SECONDS);
         }
 
+        /**
+         * リスナー数の取得を終了する
+         */
         public void shutdown() {
             mmScheduler.shutdown();
         }

@@ -413,7 +413,7 @@ public class VoiceSender {
          * 
          * @param broadcastConfig 配信設定
          */
-        public RecThread(final BroadcastConfig broadcastConfig) {
+        public RecThread(BroadcastConfig broadcastConfig) {
             mBroadcastConfig = broadcastConfig;
         }
 
@@ -495,21 +495,7 @@ public class VoiceSender {
                                 int availableDataSize = 0;
                                 synchronized (mPcmBufferLock) {
                                     // 音声のボリュームを調整する
-                                    if (isVolumeRateEnable() == true) {
-                                        int vi;
-                                        short vs;
-                                        for (int i = 0; i < readSize; ++i) {
-                                            vi = (int) (recBuffer[i] * mVolumeRateFloat);
-                                            if (vi > Short.MAX_VALUE) {
-                                                vs = Short.MAX_VALUE;
-                                            } else if (vi < Short.MIN_VALUE) {
-                                                vs = Short.MIN_VALUE;
-                                            } else {
-                                                vs = (short) vi;
-                                            }
-                                            recBuffer[i] = vs;
-                                        }
-                                    }
+                                    changeVolume(recBuffer, readSize);
 
                                     try {
                                         // バッファに書き込む
@@ -551,6 +537,48 @@ public class VoiceSender {
                 Log.d(C.TAG, "Finish Record thread.");
             }
         }
+
+        /**
+         * オーディオのチャンネル数からふさわしいChannelConfigを返す
+         * 
+         * @param channel オーディオのチャンネル数
+         * @return ChannelConfig
+         */
+        private int getAudioChannelConfig(int channel) {
+            switch (channel) {
+                case 1:
+                    return AudioFormat.CHANNEL_IN_MONO;
+                case 2:
+                    return AudioFormat.CHANNEL_IN_STEREO;
+                default:
+                    throw new InvalidParameterException("Unknown channel num.");
+            }
+        }
+
+        /**
+         * ボリュームを調整する
+         * 
+         * @param buf ボリュームを調整するPCMバッファ。ここで指定したPCMバッファを直接書き換える。
+         * @param size バッファの長さ
+         */
+        private void changeVolume(short[] buf, int size) {
+            if (isVolumeRateChanged() == true) {
+                int vi;
+                short vs;
+
+                for (int i = 0; i < size; ++i) {
+                    vi = (int) (buf[i] * mVolumeRateFloat);
+                    if (vi > Short.MAX_VALUE) {
+                        vs = Short.MAX_VALUE;
+                    } else if (vi < Short.MIN_VALUE) {
+                        vs = Short.MIN_VALUE;
+                    } else {
+                        vs = (short) vi;
+                    }
+                    buf[i] = vs;
+                }
+            }
+        }
     }
 
     /**
@@ -568,8 +596,7 @@ public class VoiceSender {
          * 
          * @param broadcastConfig 配信設定
          */
-        public EncodeThread(final BroadcastConfig broadcastConfig)
-        {
+        public EncodeThread(BroadcastConfig broadcastConfig) {
             mBroadcastConfig = broadcastConfig;
         }
 
@@ -814,8 +841,7 @@ public class VoiceSender {
          * 
          * @param broadcastConfig 配信設定
          */
-        public SendDataThread(final BroadcastConfig broadcastConfig)
-        {
+        public SendDataThread(BroadcastConfig broadcastConfig) {
             mBroadcastConfig = broadcastConfig;
         }
 
@@ -949,40 +975,7 @@ public class VoiceSender {
                     try {
                         pr = new PrintWriter(new OutputStreamWriter(
                                 sockOut, "Shift_JIS"), true);
-                        String headerStr = "SOURCE "
-                                + mBroadcastConfig.getChannelMount()
-                                + " ICE/1.0\r\n";
-                        headerStr += "Content-Type: audio/mpeg\r\n";
-                        headerStr += sUserAgent + "\r\n";
-                        headerStr += "Authorization: Basic c291cmNlOmxhZGlv\r\n";
-                        headerStr += "ice-name: "
-                                + mBroadcastConfig.getChannelTitle()
-                                + "\r\n";
-                        headerStr += "ice-genre: "
-                                + mBroadcastConfig.getChannelGenre()
-                                + "\r\n";
-                        headerStr += "ice-description: "
-                                + mBroadcastConfig.getChannelDescription()
-                                + "\r\n";
-                        headerStr += "ice-url: "
-                                + mBroadcastConfig.getChannelUrl() + "\r\n";
-                        headerStr += "ice-bitrate: "
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioBrate()) + "\r\n";
-                        headerStr += "ice-public: 0\r\n";
-                        headerStr += "ice-audio-info:ice-samplerate="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioSampleRate())
-                                + ";ice-bitrate="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioBrate())
-                                + ";ice-channels="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioChannel()) + "\r\n";
-                        headerStr += "x-ladio-info:charset=sjis;dj="
-                                + mBroadcastConfig.getChannelDjName()
-                                + "\r\n";
-                        headerStr += "\r\n"; // ヘッダの終了は空行
+                        String headerStr = createHeader();
                         pr.println(headerStr);
                         pr.flush();
                     } catch (UnsupportedEncodingException e) {
@@ -1254,89 +1247,100 @@ public class VoiceSender {
                 Log.d(C.TAG, "Finish Send data thread.");
             }
         }
-    }
 
-    /**
-     * オーディオのチャンネル数からふさわしいChannelConfigを返す
-     * 
-     * @param channel オーディオのチャンネル数
-     * @return ChannelConfig
-     */
-    private int getAudioChannelConfig(int channel) {
-        switch (channel) {
-            case 1:
-                return AudioFormat.CHANNEL_IN_MONO;
-            case 2:
-                return AudioFormat.CHANNEL_IN_STEREO;
-            default:
-                throw new InvalidParameterException("Unknown channel num.");
-        }
-    }
-
-    /**
-     * 録音を開始してから送信まで{@link C#WAIT_SEC_FROM_REC_START_TO_SEND_DATA}で指定された秒数を待つ
-     * 
-     * @throws InterruptedException 待っている間に割り込みが入った
-     */
-    private void waitFromRecStartToSendData() throws InterruptedException {
-        if (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA > 0) {
-            // 録音開始するまでポーリングで待つ
-            while ((mBroadcastState == BROADCAST_STATE_CONNECTING || mBroadcastState == BROADCAST_STATE_BROADCASTING)
-                    && mRecStartTime < 0) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Log.w(C.TAG, "Interrupted wait to rec margin.", e);
-                    throw e;
-                }
-            }
-            // 録音開始してから指定の秒数だけ待つ
-            if ((mBroadcastState == BROADCAST_STATE_CONNECTING || mBroadcastState == BROADCAST_STATE_BROADCASTING)
-                    && mRecStartTime >= 0) {
-                // 待つ時間のうちすでに録音開始してからここに到達するまでの時間は、待ち時間から差し引く
-                final long waitTime = (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA * 1000)
-                        - (System.currentTimeMillis() - mRecStartTime);
-                if (waitTime > 10)
-                {
-                    if (C.LOCAL_LOG) {
-                        Log.v(C.TAG,
-                                "Sleep "
-                                        + String.valueOf(((float) waitTime) / 1000)
-                                        + " sec.");
-                    }
+        /**
+         * 録音を開始してから送信まで{@link C#WAIT_SEC_FROM_REC_START_TO_SEND_DATA}で指定された秒数を待つ
+         * 
+         * @throws InterruptedException 待っている間に割り込みが入った
+         */
+        private void waitFromRecStartToSendData() throws InterruptedException {
+            if (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA > 0) {
+                // 録音開始するまでポーリングで待つ
+                while ((mBroadcastState == BROADCAST_STATE_CONNECTING || mBroadcastState == BROADCAST_STATE_BROADCASTING)
+                        && mRecStartTime < 0) {
                     try {
-                        Thread.sleep(waitTime);
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
                         Log.w(C.TAG, "Interrupted wait to rec margin.", e);
                         throw e;
                     }
                 }
+                // 録音開始してから指定の秒数だけ待つ
+                if ((mBroadcastState == BROADCAST_STATE_CONNECTING || mBroadcastState == BROADCAST_STATE_BROADCASTING)
+                        && mRecStartTime >= 0) {
+                    // 待つ時間のうちすでに録音開始してからここに到達するまでの時間は、待ち時間から差し引く
+                    final long waitTime = (C.WAIT_SEC_FROM_REC_START_TO_SEND_DATA * 1000)
+                            - (System.currentTimeMillis() - mRecStartTime);
+                    if (waitTime > 10) {
+                        if (C.LOCAL_LOG) {
+                            Log.v(C.TAG,
+                                    "Sleep "
+                                            + String.valueOf(((float) waitTime) / 1000)
+                                            + " sec.");
+                        }
+                        try {
+                            Thread.sleep(waitTime);
+                        } catch (InterruptedException e) {
+                            Log.w(C.TAG, "Interrupted wait to rec margin.", e);
+                            throw e;
+                        }
+                    }
+                }
             }
         }
-    }
 
-    /**
-     * 再接続する
-     * 
-     * @param broadcastConfig 接続設定
-     */
-    private void reconnect(final BroadcastConfig broadcastConfig) throws InterruptedException {
-        final long waitTime = System.currentTimeMillis() + WAIT_RECONNECT_MSEC;
+        /**
+         * ヘッダを生成する
+         * 
+         * @return 生成したヘッダ
+         */
+        private String createHeader() {
+            String result = "SOURCE "
+                    + mBroadcastConfig.getChannelMount()
+                    + " ICE/1.0\r\n";
+            result += "Content-Type: audio/mpeg\r\n";
+            result += sUserAgent + "\r\n";
+            result += "Authorization: Basic c291cmNlOmxhZGlv\r\n";
+            result += "ice-name: "
+                    + mBroadcastConfig.getChannelTitle()
+                    + "\r\n";
+            result += "ice-genre: "
+                    + mBroadcastConfig.getChannelGenre()
+                    + "\r\n";
+            result += "ice-description: "
+                    + mBroadcastConfig.getChannelDescription()
+                    + "\r\n";
+            result += "ice-url: "
+                    + mBroadcastConfig.getChannelUrl() + "\r\n";
+            result += "ice-bitrate: "
+                    + String.valueOf(mBroadcastConfig
+                            .getAudioBrate()) + "\r\n";
+            result += "ice-public: 0\r\n";
+            result += "ice-audio-info:ice-samplerate="
+                    + String.valueOf(mBroadcastConfig
+                            .getAudioSampleRate())
+                    + ";ice-bitrate="
+                    + String.valueOf(mBroadcastConfig
+                            .getAudioBrate())
+                    + ";ice-channels="
+                    + String.valueOf(mBroadcastConfig
+                            .getAudioChannel()) + "\r\n";
+            result += "x-ladio-info:charset=sjis;dj="
+                    + mBroadcastConfig.getChannelDjName()
+                    + "\r\n";
+            result += "\r\n"; // ヘッダの終了は空行
 
-        if (mBroadcastState == BROADCAST_STATE_STOPPED
-                || mBroadcastState == BROADCAST_STATE_STOPPING) {
-            mBroadcastState = BROADCAST_STATE_STOPPED;
-            notifyRecStateChangedHandle(MSG_STOP_WAIT_RECONNECT);
-            return;
+            return result;
         }
 
-        mBroadcastState = BROADCAST_STATE_CONNECTING;
+        /**
+         * 再接続する
+         * 
+         * @param broadcastConfig 接続設定
+         */
+        private void reconnect(final BroadcastConfig broadcastConfig) throws InterruptedException {
+            final long waitTime = System.currentTimeMillis() + WAIT_RECONNECT_MSEC;
 
-        Log.i(C.TAG, "Wait " + String.valueOf(((float) waitTime) / 1000)
-                + "sec before reconnect.");
-        notifyRecStateChangedHandle(MSG_RECONNECT_STARTED);
-        while (waitTime > System.currentTimeMillis())
-        {
             if (mBroadcastState == BROADCAST_STATE_STOPPED
                     || mBroadcastState == BROADCAST_STATE_STOPPING) {
                 mBroadcastState = BROADCAST_STATE_STOPPED;
@@ -1344,16 +1348,30 @@ public class VoiceSender {
                 return;
             }
 
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Log.w(C.TAG, "Interrupted wait to recoonect.", e);
-                throw e;
-            }
-        }
+            mBroadcastState = BROADCAST_STATE_CONNECTING;
 
-        Log.i(C.TAG, "Reconnect.");
-        (new SendDataThread(broadcastConfig)).start();
+            Log.i(C.TAG, "Wait " + String.valueOf(((float) waitTime) / 1000)
+                    + "sec before reconnect.");
+            notifyRecStateChangedHandle(MSG_RECONNECT_STARTED);
+            while (waitTime > System.currentTimeMillis()) {
+                if (mBroadcastState == BROADCAST_STATE_STOPPED
+                        || mBroadcastState == BROADCAST_STATE_STOPPING) {
+                    mBroadcastState = BROADCAST_STATE_STOPPED;
+                    notifyRecStateChangedHandle(MSG_STOP_WAIT_RECONNECT);
+                    return;
+                }
+
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Log.w(C.TAG, "Interrupted wait to recoonect.", e);
+                    throw e;
+                }
+            }
+
+            Log.i(C.TAG, "Reconnect.");
+            (new SendDataThread(broadcastConfig)).start();
+        }
     }
 
     /**
@@ -1415,7 +1433,7 @@ public class VoiceSender {
      * 
      * @return 音量を変化させる場合はtrue、それ以外はfalse
      */
-    private final boolean isVolumeRateEnable() {
+    private final boolean isVolumeRateChanged() {
         return mVolumeRate != 100;
     }
 
