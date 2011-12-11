@@ -78,6 +78,11 @@ public class MainActivity extends Activity {
 
     private final static int MENU_ID_SETTING = Menu.FIRST + 3;
 
+    /**
+     * ミュート前の音量
+     */
+    private char mVolumeRateBeforeMute = 100;
+    
     private TextView mBroadcastStatusTextView;
 
     private TextView mListenersNumTextView;
@@ -280,6 +285,25 @@ public class MainActivity extends Activity {
             }
         });
 
+        final Button muteButton = (Button) findViewById(R.id.MuteButton);
+        muteButton.setOnClickListener(new OnClickListener() {
+            
+            @Override
+            public void onClick(View v) {
+                char volumeRate = BroadcastManager.getConnector()
+                        .getVolumeRate();
+                // 音量が0以外の場合はミュートにする
+                if (volumeRate > 0) {
+                    mVolumeRateBeforeMute = volumeRate;
+                    volumeRateSeekbar.setProgress(0);
+                }
+                // 音量が0の場合はミュート解除する
+                else {
+                    volumeRateSeekbar.setProgress(mVolumeRateBeforeMute);
+                }
+            }
+        });
+        
         /*
          * サービスに接続した直後にボタン類の書き換えを行う。
          * サービスに接続するまでは配信中かどうかを確認できないため、ボタン類の書き換えができない。
@@ -293,8 +317,12 @@ public class MainActivity extends Activity {
                         switch (msg.what) {
                             case BroadcastServiceConnector.MSG_CONNECTED_SERVICE:
                                 switchViewAsBroadcastState();
-                                volumeRateSeekbar.setProgress(BroadcastManager.getConnector()
-                                        .getVolumeRate());
+
+                                final char volumeRate = BroadcastManager.getConnector()
+                                        .getVolumeRate();
+                                volumeRateSeekbar.setProgress(volumeRate);
+                                mVolumeRateBeforeMute = volumeRate;
+
                                 /*
                                  * サービスは1度起動したら、配信されていない状態でアプリを終了しない限り 停止しない。
                                  * よって、1度サービスを起動してしまえば音量を取得できるため、

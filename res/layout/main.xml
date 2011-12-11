@@ -193,34 +193,47 @@
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:orientation="vertical" >
+                    android:orientation="horizontal">
 
                     <LinearLayout
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal" >
+                        android:layout_weight="1"
+                        android:orientation="vertical" >
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="fill_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/volume"
-                            android:textAppearance="@android:style/TextAppearance.Small" />
+                            android:orientation="horizontal" >
 
-                        <TextView
-                            android:id="@+id/VolumeRateTextView"
-                            android:layout_width="wrap_content"
+                            <TextView
+                                android:layout_width="fill_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/volume"
+                                android:textAppearance="@android:style/TextAppearance.Small" />
+
+                            <TextView
+                                android:id="@+id/VolumeRateTextView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="100%" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/VolumeRateSeekBar"
+                            android:layout_width="fill_parent"
                             android:layout_height="wrap_content"
-                            android:text="100%" />
+                            android:max="200"
+                            android:progress="100" />
                     </LinearLayout>
 
-                    <SeekBar
-                        android:id="@+id/VolumeRateSeekBar"
-                        android:layout_width="fill_parent"
+                    <Button
+                        android:id="@+id/MuteButton"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:max="200"
-                        android:progress="100" />
+                        android:layout_gravity="bottom"
+                        android:text="@string/mute" />
                 </LinearLayout>
             </LinearLayout>
         </RelativeLayout>
