@@ -80,6 +80,10 @@ public class MainActivity extends Activity {
 
     private TextView mBroadcastStatusTextView;
 
+    private TextView mListenersNumTextView;
+
+    private TextView mBroadcastTimeTextView;
+
     private Button mStartStopButton;
 
     /**
@@ -162,6 +166,11 @@ public class MainActivity extends Activity {
      */
     private final BroadcastListenerFetcher mBroadcastListenerFetcher = new BroadcastListenerFetcher();
 
+    /**
+     * 配信時間をカウント
+     */
+    private final BroadcastTimeCounter mBroadcastTimeCounter = new BroadcastTimeCounter();
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -223,6 +232,10 @@ public class MainActivity extends Activity {
 
         mBroadcastStatusTextView = (TextView) findViewById(R.id.BroadcastStatusTextView);
 
+        mListenersNumTextView = (TextView) findViewById(R.id.ListenersNumTextView);
+        
+        mBroadcastTimeTextView = (TextView) findViewById(R.id.BroadcastTimeTextView);
+        
         mStartStopButton = (Button) findViewById(R.id.StartStopButton);
         mStartStopButton.setOnClickListener(new OnClickListener() {
 
@@ -307,6 +320,9 @@ public class MainActivity extends Activity {
 
         // リスナー数の取得開始
         mBroadcastListenerFetcher.start();
+
+        // 配信時間更新
+        mBroadcastTimeCounter.start();
     }
 
     @Override
@@ -332,6 +348,9 @@ public class MainActivity extends Activity {
 
         // リスナー数の取得終了
         mBroadcastListenerFetcher.shutdown();
+
+        // 配信時間更新終了
+        mBroadcastTimeCounter.shutdown();
 
         switchViewAsBroadcastState();
         BroadcastManager.getConnector().release();
@@ -1020,16 +1039,11 @@ public class MainActivity extends Activity {
 
             @Override
             public void handleMessage(Message msg) {
-                TextView listenersNumTextView = (TextView) findViewById(R.id.ListenersNumTextView);
-                if (listenersNumTextView == null) {
-                    return;
-                }
-
                 switch (msg.what) {
                     case MSG_FETCHED_HEADLINE:
                         final Channel channel = (Channel) msg.obj;
                         if (channel != null) {
-                            listenersNumTextView.setText(String
+                            mListenersNumTextView.setText(String
                                     .format("%s %d / %s %d / %s %d",
                                             getString(R.string.listeners_num),
                                             channel.getCln(),
@@ -1038,20 +1052,122 @@ public class MainActivity extends Activity {
                                             getString(R.string.total_listeners_num),
                                             channel.getClns()));
                         } else {
-                            listenersNumTextView
+                            mListenersNumTextView
                                     .setText(R.string.unknown_listeners_num);
                         }
                         break;
                     case MSG_ERROR_FETCH_HEADLINE:
-                        listenersNumTextView
+                        mListenersNumTextView
                                 .setText(R.string.unknown_listeners_num);
                         break;
                     default:
                         Log.w(C.TAG, "Unknown received message "
                                 + msg.what
                                 + " when fetch listeners num.");
-                        listenersNumTextView
+                        mListenersNumTextView
                                 .setText(R.string.unknown_listeners_num);
+                        break;
+                }
+            }
+        };
+
+        /**
+         * リスナー数の取得を開始する
+         */
+        public void start() {
+            mmScheduler.schedule(mmFetchListenerTask, 0, TimeUnit.SECONDS);
+        }
+
+        /**
+         * リスナー数の取得を終了する
+         */
+        public void shutdown() {
+            mmScheduler.shutdown();
+        }
+    }
+    
+    /**
+     * 配信秒数をカウントするクラス
+     */
+    private class BroadcastTimeCounter {
+        
+        /**
+         * 時間更新
+         */
+        private static final int MSG_UPDATE = 0;
+
+        /**
+         * 配信情報
+         */
+        private BroadcastInfo mmBroadcastInfo;
+        
+        /**
+         * ロックオブジェクト
+         */
+        private final Object mmLock = new Object();
+        
+        private final ScheduledExecutorService mmScheduler = Executors
+                .newSingleThreadScheduledExecutor();
+
+        private final Runnable mmFetchListenerTask = new Runnable() {
+
+            @Override
+            public void run() {
+                synchronized (mmLock) {
+                    if (mmBroadcastInfo == null) {
+                        mmBroadcastInfo = BroadcastManager
+                                .getConnector().getBroadcastInfo(); // 配信中の情報を取得する
+                    }
+
+                    // 配信中でない場合
+                    if (mmBroadcastInfo == null
+                            || BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
+                        // 配信中で無い場合は、再び配信中になった場合に配信情報を取得しにいくように配信情報を空にする
+                        mmBroadcastInfo = null;
+
+                        // 1秒後に再び配信秒数をカウントする
+                        mmScheduler.schedule(this, 1, TimeUnit.SECONDS);
+                        return;
+                    }
+
+                    // 配信中なので時刻を更新する
+                    mmHandler.sendEmptyMessage(MSG_UPDATE);
+
+                    // 1秒後に再び配信秒数をカウントする
+                    mmScheduler.schedule(this, 1, TimeUnit.SECONDS);
+                }
+            }
+        };
+
+        /**
+         * リスナー数を取得した後の処理Handler
+         */
+        private final Handler mmHandler = new Handler() {
+
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case MSG_UPDATE:
+                        long startTime = 0;
+                        synchronized (mmLock) {
+                            startTime = mmBroadcastInfo.getStartTime();
+                        }
+                        
+                        // 経過秒数
+                        final long postSec = (System.currentTimeMillis() - startTime) / 1000;
+                        // 0以下であることはあり得ないはずだが一応チェック
+                        if (postSec > 0) {
+                            // 経過時間を表示
+                            final long hour = postSec / 3600;
+                            final long min = (postSec % 3600) / 60;
+                            final long sec = postSec % 60;
+                            mBroadcastTimeTextView.setText(String.format("%d:%02d:%02d", hour, min, sec));
+                        }
+                        break;
+                    default:
+                        Log.w(C.TAG, "Unknown received message "
+                                + msg.what
+                                + " when update broadcast time.");
                         break;
                 }
             }

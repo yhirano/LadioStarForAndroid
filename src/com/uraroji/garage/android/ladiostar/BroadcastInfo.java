@@ -48,17 +48,26 @@ public final class BroadcastInfo implements Parcelable {
     private final int mServerPort;
 
     /**
+     * 配信を開始した時刻。<br />
+     * {@link System#currentTimeMillis()}}で取得した配信開始時刻を格納する。
+     */
+    private final long mStartTime;
+    
+    /**
      * コンストラクタ
      * 
      * @param broadcastConfig 配信設定
      * @param serverName 配信サーバ
      * @param serverPort ポート番号
+     * @param startTime 配信を開始した時刻。<br />
+     *            {@link System#currentTimeMillis()} で取得した配信開始時刻を指定すること。
      */
     public BroadcastInfo(BroadcastConfig broadcastConfig,
-            String serverName, int serverPort) {
+            String serverName, int serverPort, long startTime) {
         this.mBroadcastConfig = broadcastConfig;
         this.mServerName = serverName;
         this.mServerPort = serverPort;
+        this.mStartTime = startTime;
     }
 
     public static final Parcelable.Creator<BroadcastInfo> CREATOR = new Parcelable.Creator<BroadcastInfo>() {
@@ -75,6 +84,7 @@ public final class BroadcastInfo implements Parcelable {
         this.mBroadcastConfig = in.readParcelable(BroadcastConfig.class.getClassLoader());
         this.mServerName = in.readString();
         this.mServerPort = in.readInt();
+        this.mStartTime = in.readLong();
     }
 
     @Override
@@ -87,13 +97,15 @@ public final class BroadcastInfo implements Parcelable {
         dest.writeParcelable(mBroadcastConfig, 0);
         dest.writeString(mServerName);
         dest.writeInt(mServerPort);
+        dest.writeLong(mStartTime);
     }
 
     @Override
     public String toString() {
-        return "BroadcastInfo [mBroadcastConfig=" + mBroadcastConfig
+        return "BroadcastInfo [mBroadcastConfig=" + mBroadcastConfig.toString()
                 + ", mServerName=" + mServerName + ", mServerPort="
-                + mServerPort + "]";
+                + Integer.toString(mServerPort) + " mStartTime=" + Long.toString(mStartTime)
+                + "]";
     }
 
     /**
@@ -202,5 +214,15 @@ public final class BroadcastInfo implements Parcelable {
      */
     public final int getServerPort() {
         return mServerPort;
+    }
+    
+    /**
+     * 配信を開始した時刻を取得する
+     * 
+     * @return 配信を開始した時刻。<br />
+     * {@link System#currentTimeMillis()}}で取得した配信開始時刻を返す。
+     */
+    public final long getStartTime() {
+        return mStartTime;
     }
 }

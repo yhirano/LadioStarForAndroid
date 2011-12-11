@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="app_name">Ladio Star</string>
     <string name="auto">自動</string>
     <string name="channel_info">番組情報</string>
@@ -90,6 +91,10 @@
     <string name="max_listeners_num">最大</string>
     <string name="total_listeners_num">延べ</string>
     <string name="unknown_listeners_num">-</string>
+    <string name="broadcast_time">配信時間</string>
+    <string name="default_broadcast_time">00:00:00</string>
     <string name="volume">音量</string>
+
     <color name="main_bottom_background">#5F5F5F</color>
+
 </resources>

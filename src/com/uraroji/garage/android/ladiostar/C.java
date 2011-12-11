@@ -135,6 +135,11 @@ public class C {
 	 */
 	public static final int LISTENER_FETCH_INTERVAL_SEC = 30;
 	
+    /**
+     * 切断した際の再接続までの待ち時間（ミリ秒）
+     */
+    public static final long WAIT_RECONNECT_MSEC = 4000;
+
 	/**
 	 * NotificationのID
 	 * 

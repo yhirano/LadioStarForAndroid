@@ -265,11 +265,6 @@ public class VoiceSender {
     public static final int BROADCAST_STATE_STOPPING = 4;
 
     /**
-     * 再接続までの待ち時間（ミリ秒）
-     */
-    private static final long WAIT_RECONNECT_MSEC = 4000;
-
-    /**
      * ねとらじサーバに通知するUserAgent
      */
     private static String sUserAgent;
@@ -324,7 +319,8 @@ public class VoiceSender {
     private volatile float mVolumeRateFloat = mVolumeRate / 100F;
 
     /**
-     * 配信情報 配信中の番組の情報を格納する
+     * 配信情報<br />
+     * 配信中の番組の情報を格納する
      */
     private BroadcastInfo mBroadcastingInfo;
 
@@ -334,7 +330,16 @@ public class VoiceSender {
     private final Object mBroadcastingInfoLock = new Object();
 
     /**
-     * 録音を開始した時刻
+     * 配信を開始した時刻。（正確には{@link #start(BroadcastConfig)}を実行した時刻。）<br />
+     * {@link System#currentTimeMillis()}で取得した値を格納する。<br />
+     * 配信情報に使用。
+     */
+    private volatile long mStartTime = -1;
+    
+    /**
+     * 録音を開始した時刻。<br />
+     * {@link System#currentTimeMillis()}で取得した値を格納する。<br />
+     * 録音開始から配信開始までの待ち時間計測に使用。
      */
     private volatile long mRecStartTime = -1;
 
@@ -393,6 +398,8 @@ public class VoiceSender {
 
         mBroadcastState = BROADCAST_STATE_CONNECTING; // 動作の開始フラグを立てる
 
+        mStartTime = System.currentTimeMillis(); // 開始時刻を設定
+        
         (new RecThread(broadcastConfig)).start();
         (new EncodeThread(broadcastConfig)).start();
         (new SendDataThread(broadcastConfig)).start();
@@ -1092,7 +1099,7 @@ public class VoiceSender {
                         mBroadcastingInfo = new BroadcastInfo(
                                 mBroadcastConfig, broadcastServer
                                         .getServerName().getName(),
-                                broadcastServer.getServerName().getPort());
+                                broadcastServer.getServerName().getPort(), mStartTime);
                     }
 
                     mBroadcastState = BROADCAST_STATE_BROADCASTING;
@@ -1339,7 +1346,7 @@ public class VoiceSender {
          * @param broadcastConfig 接続設定
          */
         private void reconnect(final BroadcastConfig broadcastConfig) throws InterruptedException {
-            final long waitTime = System.currentTimeMillis() + WAIT_RECONNECT_MSEC;
+            final long waitTime = System.currentTimeMillis() + C.WAIT_RECONNECT_MSEC;
 
             if (mBroadcastState == BROADCAST_STATE_STOPPED
                     || mBroadcastState == BROADCAST_STATE_STOPPING) {
