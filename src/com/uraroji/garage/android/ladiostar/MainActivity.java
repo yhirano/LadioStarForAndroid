@@ -39,6 +39,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -89,6 +90,8 @@ public class MainActivity extends Activity {
 
     private TextView mBroadcastTimeTextView;
 
+    private SeekBar mVolumeRateSeekbar;
+    
     private Button mStartStopButton;
 
     /**
@@ -263,8 +266,8 @@ public class MainActivity extends Activity {
 
         final TextView volumeRateTextView = (TextView) findViewById(R.id.VolumeRateTextView);
 
-        final SeekBar volumeRateSeekbar = (SeekBar) findViewById(R.id.VolumeRateSeekBar);
-        volumeRateSeekbar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+        mVolumeRateSeekbar = (SeekBar) findViewById(R.id.VolumeRateSeekBar);
+        mVolumeRateSeekbar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
@@ -295,11 +298,11 @@ public class MainActivity extends Activity {
                 // 音量が0以外の場合はミュートにする
                 if (volumeRate > 0) {
                     mVolumeRateBeforeMute = volumeRate;
-                    volumeRateSeekbar.setProgress(0);
+                    mVolumeRateSeekbar.setProgress(0);
                 }
                 // 音量が0の場合はミュート解除する
                 else {
-                    volumeRateSeekbar.setProgress(mVolumeRateBeforeMute);
+                    mVolumeRateSeekbar.setProgress(mVolumeRateBeforeMute);
                 }
             }
         });
@@ -320,7 +323,7 @@ public class MainActivity extends Activity {
 
                                 final char volumeRate = BroadcastManager.getConnector()
                                         .getVolumeRate();
-                                volumeRateSeekbar.setProgress(volumeRate);
+                                mVolumeRateSeekbar.setProgress(volumeRate);
                                 mVolumeRateBeforeMute = volumeRate;
 
                                 /*
@@ -439,6 +442,39 @@ public class MainActivity extends Activity {
                 }
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        int volume;
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                volume = mVolumeRateSeekbar.getProgress();
+                if (volume > 0) {
+                    mVolumeRateSeekbar.setProgress(volume - 1);
+                }
+                return true;
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                volume = mVolumeRateSeekbar.getProgress();
+                if (volume < mVolumeRateSeekbar.getMax()) {
+                    mVolumeRateSeekbar.setProgress(volume + 1);
+                }
+                return true;
+            default:
+                return super.onKeyDown(keyCode, event);
+        }
+    }
+    
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                // ボリュームダウン・アップのキー押し上げを殺す
+                return true;
+            default:
+                return super.onKeyUp(keyCode, event);
         }
     }
 
