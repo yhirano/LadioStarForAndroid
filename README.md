@@ -7,5 +7,3 @@ Android端末からねとらじを配信することができます。
 
 ## ライセンス
 MIT License
-
-一部Apache Licenseのソースコードを含みます。

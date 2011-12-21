@@ -30,6 +30,13 @@ import android.net.Uri;
 public class C {
 
     /**
+     * 設定値「マウント名」のデフォルトの文字の長さ。<br />
+     * マウント名が未指定の場合に、ランダムな文字列でマウント名を生成するが、
+     * その時の文字列の長さ。
+     */
+    public static final int DEFAULT_MOUNT_STRING_LENGTH = 14;
+    
+    /**
      * 設定値「ビットレート」のデフォルト値 (kbps)
      */
     public static final int DEFAULT_AUDIO_BITRATE = 32;

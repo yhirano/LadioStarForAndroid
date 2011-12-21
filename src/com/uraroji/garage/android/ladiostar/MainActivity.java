@@ -50,11 +50,10 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
 import com.uraroji.garage.android.ladiostar.bugreport.AppUncaughtExceptionHandler;
+import com.uraroji.garage.android.ladiostar.util.RandomStringUtils;
 import com.uraroji.garage.android.netladiolib.Channel;
 import com.uraroji.garage.android.netladiolib.Headline;
 import com.uraroji.garage.android.netladiolib.HeadlineManager;
-
-import org.apache.commons.lang.RandomStringUtils;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -511,7 +510,7 @@ public class MainActivity extends Activity {
         String mount = mPref.getString("channel_mount", "");
         if ((mount.length() == 0) || (mount.length() == 1 && mount.charAt(0) == '/')) {
             prefEditor.putString("channel_mount",
-                    "/" + RandomStringUtils.randomAlphabetic(14));
+                    "/" + RandomStringUtils.randomAlphabetic(C.DEFAULT_MOUNT_STRING_LENGTH));
         } else if (mount.length() != 0 && mount.charAt(0) != '/') {
             prefEditor.putString("channel_mount", "/" + mount);
         }
@@ -683,7 +682,7 @@ public class MainActivity extends Activity {
         if ((result.length() == 0) || (result.length() == 1 && result.charAt(0) == '/')) {
             SharedPreferences.Editor prefEditor = mPref.edit();
             prefEditor.putString("channel_mount",
-                    "/" + RandomStringUtils.randomAlphabetic(14));
+                    "/" + RandomStringUtils.randomAlphabetic(C.DEFAULT_MOUNT_STRING_LENGTH));
             prefEditor.commit();
             result = mPref.getString("channel_mount", "");
         } else if (result.length() != 0 && result.charAt(0) != '/') {
