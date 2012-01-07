@@ -25,8 +25,6 @@ package com.uraroji.garage.android.ladiostar;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import java.security.InvalidParameterException;
-
 /**
  * 配信設定
  */
@@ -104,13 +102,13 @@ public final class BroadcastConfig implements Parcelable {
      * @param channelMount マウント
      * @param channelServer 配信サーバ。<br />
      *            配信サーバを自動で選択する場合はの場合はnullもしくは空文字列を指定すること。
-     * @throws InvalidParameterException audioBrateが0以下
-     * @throws InvalidParameterException audioChannelが1か2以外
-     * @throws InvalidParameterException audioSampleRateが0以下
-     * @throws InvalidParameterException audioMp3EncodeQualityが0未満
-     * @throws InvalidParameterException audioMp3EncodeQualityが9より大きい
-     * @throws InvalidParameterException channelMountにnullを指定した
-     * @throws InvalidParameterException channelMountがマウントとして不正
+     * @throws IllegalArgumentException audioBrateが0以下
+     * @throws IllegalArgumentException audioChannelが1か2以外
+     * @throws IllegalArgumentException audioSampleRateが0以下
+     * @throws IllegalArgumentException audioMp3EncodeQualityが0未満
+     * @throws IllegalArgumentException audioMp3EncodeQualityが9より大きい
+     * @throws IllegalArgumentException channelMountにnullを指定した
+     * @throws IllegalArgumentException channelMountがマウントとして不正
      */
     public BroadcastConfig(int audioBrate, int audioChannel,
             int audioSampleRate, int audioMp3EncodeQuality,
@@ -118,7 +116,7 @@ public final class BroadcastConfig implements Parcelable {
             String channelDescription, String channelUrl, String channelGenre,
             String channelMount, String channelServer) {
         if (audioBrate <= 0) {
-            throw new InvalidParameterException(
+            throw new IllegalArgumentException(
                     "audioBrate must be greater than 0.");
         }
 
@@ -127,26 +125,26 @@ public final class BroadcastConfig implements Parcelable {
             case 2:
                 break;
             default:
-                throw new InvalidParameterException("audioChannel must be 1 or 2.");
+                throw new IllegalArgumentException("audioChannel must be 1 or 2.");
         }
 
         if (audioSampleRate <= 0) {
-            throw new InvalidParameterException(
+            throw new IllegalArgumentException(
                     "audioSampleRate must be greater than 0.");
         }
 
         if (audioMp3EncodeQuality < 0 || audioMp3EncodeQuality > 9) {
-            throw new InvalidParameterException(
+            throw new IllegalArgumentException(
                     "audioMp3EncodeQuality must be 0-9.");
         }
 
         if (channelMount == null) {
-            throw new InvalidParameterException(
+            throw new IllegalArgumentException(
                     "channelMount must be not null.");
         }
         if ((channelMount.length() == 0)
                 || (channelMount.length() == 1 && channelMount.charAt(0) == '/')) {
-            throw new InvalidParameterException("channelMount is invalid.");
+            throw new IllegalArgumentException("channelMount is invalid.");
         }
 
         this.mAudioBrate = audioBrate;

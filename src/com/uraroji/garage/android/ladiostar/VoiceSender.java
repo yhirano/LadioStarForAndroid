@@ -46,7 +46,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.BufferOverflowException;
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -358,11 +357,11 @@ public class VoiceSender {
      * 開始する
      * 
      * @param broadcastConfig 配信設定
-     * @throws InvalidParameterException broadcastConfigにnullを指定した
+     * @throws IllegalArgumentException broadcastConfigにnullを指定した
      */
     public final void start(final BroadcastConfig broadcastConfig) {
         if (broadcastConfig == null) {
-            throw new InvalidParameterException("broadcastConfig must be not null.");
+            throw new IllegalArgumentException("broadcastConfig must be not null.");
         }
 
         // 既に動作中の場合は何もしない
@@ -552,7 +551,7 @@ public class VoiceSender {
                 case 2:
                     return AudioFormat.CHANNEL_IN_STEREO;
                 default:
-                    throw new InvalidParameterException("Unknown channel num.");
+                    throw new IllegalArgumentException("Unknown channel num.");
             }
         }
 
