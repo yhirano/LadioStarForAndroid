@@ -1213,7 +1213,11 @@ public class MainActivity extends Activity {
                     case MSG_UPDATE:
                         long startTime = 0;
                         synchronized (mmLock) {
-                            startTime = mmBroadcastInfo.getStartTime();
+                            if (mmBroadcastInfo == null) {
+                                break;
+                            } else {
+                                startTime = mmBroadcastInfo.getStartTime();
+                            }
                         }
                         
                         // 経過秒数
