@@ -418,9 +418,13 @@ public class MainActivity extends Activity {
             case MENU_ID_REFERENCE_SITE:
                 String urlString = getSettingChannelUrl();
                 if (urlString.length() != 0) {
-                    Uri uri = Uri.parse(urlString);
-                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    return false;
+                    try {
+                        Uri uri = Uri.parse(urlString);
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                        return false;
+                    } catch (ActivityNotFoundException e) {
+                        return super.onOptionsItemSelected(item);
+                    }
                 } else {
                     return super.onOptionsItemSelected(item);
                 }
@@ -433,9 +437,13 @@ public class MainActivity extends Activity {
                 }
             case MENU_ID_SETTING:
                 if (BroadcastManager.getConnector().getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
-                    startActivity(new Intent(this,
-                            LadioStarPreferenceActivity.class));
-                    return false;
+                    try {
+                        startActivity(new Intent(this,
+                                LadioStarPreferenceActivity.class));
+                        return false;
+                    } catch (ActivityNotFoundException e) {
+                        return super.onOptionsItemSelected(item);
+                    }
                 } else {
                     return super.onOptionsItemSelected(item);
                 }
