@@ -28,6 +28,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -249,12 +250,17 @@ public class BroadcastService extends Service {
                 }
                 // 配信中の場合はNotification表示する
                 else {
+                    // Android 2.2以下と2.3以上でステータスバーに表示するアイコンを分ける
+                    final int iconId = ((Build.VERSION.SDK_INT >= 9) ? R.drawable.ic_stat_2_3
+                            : R.drawable.ic_stat_2_2);
+                    
                     // Notificationを表示する
                     final String notificationTitle = String.format(
                             BroadcastService.this
                                     .getString(R.string.broadcasting_notification_title_format),
                             broadcastingInfo.getChannelTitle());
-                    Notification n = new Notification(R.drawable.ic_launcher,
+                    
+                    Notification n = new Notification(iconId,
                             notificationTitle, System.currentTimeMillis());
                     Intent intent = new Intent(BroadcastService.this,
                             MainActivity.class);
