@@ -242,8 +242,8 @@ public class BroadcastService extends Service {
                  * 配信中でもbroadcastingInfoが取得できないこともある（配信開始直後）ので、
                  * broadcastingInfoがnullであるかもチェックする。
                  */
-                if ((mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING || mVoiceSender
-                        .getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED)
+                if ((mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPING
+                        || mVoiceSender.getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED)
                         || broadcastingInfo == null) {
                     // Notificationを消す
                     nm.cancel(C.NOTIFICATION_ID);
@@ -251,8 +251,8 @@ public class BroadcastService extends Service {
                 // 配信中の場合はNotification表示する
                 else {
                     // Android 2.2以下と2.3以上でステータスバーに表示するアイコンを分ける
-                    final int iconId = ((Build.VERSION.SDK_INT >= 9) ? R.drawable.ic_stat_2_3
-                            : R.drawable.ic_stat_2_2);
+                    final int iconId = ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+                            ? R.drawable.ic_stat_2_3 : R.drawable.ic_stat_2_2);
                     
                     // Notificationを表示する
                     final String notificationTitle = String.format(
