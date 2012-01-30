@@ -391,9 +391,11 @@ public class MainActivity extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // メニューアイテムを追加
         menu.add(Menu.NONE, MENU_ID_REFERENCE_SITE, Menu.NONE,
-                R.string.open_channel_url_site);
-        menu.add(Menu.NONE, MENU_ID_HELP, Menu.NONE, R.string.help);
-        menu.add(Menu.NONE, MENU_ID_SETTING, Menu.NONE, R.string.setting);
+                R.string.reference_site).setIcon(R.drawable.ic_menu_globe);
+        menu.add(Menu.NONE, MENU_ID_HELP, Menu.NONE, R.string.help).setIcon(
+                android.R.drawable.ic_menu_help);
+        menu.add(Menu.NONE, MENU_ID_SETTING, Menu.NONE, R.string.setting).setIcon(
+                android.R.drawable.ic_menu_preferences);
 
         return super.onCreateOptionsMenu(menu);
     }

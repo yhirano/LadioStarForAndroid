@@ -83,7 +83,7 @@
     <string name="disable_connect_server_too_many_sources_connected">ねとらじサーバに接続できませんでした。サーバが混み合っています。</string>
     <string name="disable_connect_server_unknown_error">ねとらじサーバに接続できませんでした。原因不明のエラーです。</string>
     <string name="disable_encode">エンコードできませんでした</string>
-    <string name="open_channel_url_site">関連サイトを開く</string>
+    <string name="reference_site">関連サイト</string>
     <string name="broadcasting_notification_title_format">%s 配信中</string>
     <string name="broadcast_state">配信状況</string>
     <string name="failed_rec_stop">配信が停止できませんでした</string>

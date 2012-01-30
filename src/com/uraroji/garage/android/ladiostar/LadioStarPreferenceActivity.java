@@ -46,7 +46,8 @@ public class LadioStarPreferenceActivity extends PreferenceActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // メニューアイテムを追加
-        menu.add(Menu.NONE, MENU_ID_HELP, Menu.NONE, R.string.help);
+        menu.add(Menu.NONE, MENU_ID_HELP, Menu.NONE, R.string.help).setIcon(
+                android.R.drawable.ic_menu_help);
         return super.onCreateOptionsMenu(menu);
     }
 
