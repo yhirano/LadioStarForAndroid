@@ -432,7 +432,7 @@ public class MainActivity extends Activity {
                 }
             case MENU_ID_HELP:
                 try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, C.HELP_MAIN_URL));
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.help_main_url))));
                     return false;
                 } catch (ActivityNotFoundException e) {
                     return super.onOptionsItemSelected(item);

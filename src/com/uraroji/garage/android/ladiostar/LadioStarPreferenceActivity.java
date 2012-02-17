@@ -24,6 +24,7 @@ package com.uraroji.garage.android.ladiostar;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.view.Menu;
@@ -57,7 +58,7 @@ public class LadioStarPreferenceActivity extends PreferenceActivity {
         switch (item.getItemId()) {
             case MENU_ID_HELP:
                 try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, C.HELP_SETTING_URL));
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.help_setting_url))));
                     return false;
                 } catch (ActivityNotFoundException e) {
                     return super.onOptionsItemSelected(item);

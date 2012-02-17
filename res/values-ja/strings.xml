@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="auto">自動</string>
+    <string name="channel_info">番組情報</string>
+    <string name="broadcast_info">配信情報</string>
+    <string name="setting">設定</string>
+    <string name="channel_dj_name">DJ名</string>
+    <string name="channel_dj_name_summary">DJ名を設定します</string>
+    <string name="channel_dj_name_message">DJ名を設定します。DJ名に続けて#トリップを入力できます。</string>
+    <string name="channel_title">タイトル</string>
+    <string name="channel_title_summary">番組のタイトルを設定します</string>
+    <string name="channel_title_message">番組のタイトルを設定します</string>
+    <string name="channel_description">番組の説明</string>
+    <string name="channel_description_summary">番組の説明を設定します</string>
+    <string name="channel_description_message">番組の説明を設定します</string>
+    <string name="channel_url">関連サイト</string>
+    <string name="channel_url_summary">番組に関連するサイトのURLを設定します</string>
+    <string name="channel_url_message">番組に関連するサイトのURLを設定します</string>
+    <string name="channel_genre">ジャンル</string>
+    <string name="channel_genre_summary">ジャンルを設定します</string>
+    <string name="channel_genre_message">ジャンルを設定します</string>
+    <string name="channel_mount">マウント名</string>
+    <string name="channel_mount_summary">マウント名を設定します</string>
+    <string name="channel_mount_message">マウント名を設定します。「/example」のように先頭に/をつける必要があります。</string>
+    <string name="channel_server">配信サーバ</string>
+    <string name="channel_server_summary">配信サーバを設定します。よく分からない場合は自動を選択してください。</string>
+    <string name="channel_server_message">配信サーバを設定します。よく分からない場合は自動を選択してください。</string>
+    <string name="audio_info">音声情報</string>
+    <string name="audio_bitrate">ビットレート</string>
+    <string name="audio_bitrate_summary">ビットレートを設定します</string>
+    <string name="audio_channel">モノラル/ステレオ</string>
+    <string name="audio_channel_summary">モノラル/ステレオを設定します</string>
+    <string name="audio_sample_rate">サンプリングレート</string>
+    <string name="audio_sample_rate_summary">サンプリングレートを設定します。よく分からない場合は44100Hzを選択してください。</string>
+    <string name="audio_mp3_encode_quality">エンコード品質</string>
+    <string name="audio_mp3_encode_quality_summary">音声のエンコード品質を設定します。品質を高くしすぎると配信が停止することがあります。</string>
+    <string name="audio_mp3_encode_quality_q0">最高品質</string>
+    <string name="audio_mp3_encode_quality_q1">かなり高い</string>
+    <string name="audio_mp3_encode_quality_q2">高い</string>
+    <string name="audio_mp3_encode_quality_q3">高め</string>
+    <string name="audio_mp3_encode_quality_q4">やや高め</string>
+    <string name="audio_mp3_encode_quality_q5">標準</string>
+    <string name="audio_mp3_encode_quality_q6">やや低め</string>
+    <string name="audio_mp3_encode_quality_q7">低め</string>
+    <string name="audio_mp3_encode_quality_q8">低い</string>
+    <string name="audio_mp3_encode_quality_q9">かなり低い（かなり低速な端末向け）</string>
+    <string name="anonymous_dj_name">名無しのDJ</string>
+    <string name="anonymous_title">名無しの番組</string>
+    <string name="anonymous_description">Ladio Starで配信中</string>
+    <string name="close">閉じる</string>
+    <string name="help">ヘルプ</string>
+    <string name="send_bugreport">前回の起動中に予期しないエラーが発生しました。開発元にエラー情報を送信しますか？ プライバシーに関わる情報は送信しません。</string>
+    <string name="mono">モノラル</string>
+    <string name="stereo">ステレオ</string>
+    <string name="unknown">不明</string>
+    <string name="connecting">接続中...</string>
+    <string name="disconnecting">切断中...</string>
+    <string name="disable_connect_server">ねとらじサーバに接続できませんでした</string>
+    <string name="broadcast_started">ねとらじ配信を開始しました</string>
+    <string name="broadcast_stopped">ねとらじ配信を終了しました</string>
+    <string name="disconnected_server">ねとらじサーバから切断されました</string>
+    <string name="disable_rec_start_change_channel_or_sample">録音が開始できませんでした。モノラル/ステレオ設定、サンプリングレートの設定を変更してみてください。</string>
+    <string name="disable_rec_start">録音が開始できませんでした</string>
+    <string name="disconnect_server">ねとらじサーバと切断しました</string>
+    <string name="encode_too_slow">ねとらじ配信を中止しました。MP3エンコードが間に合いません。ビットレートを下げる・モノラルにする・サンプリングレートを下げる・エンコード品質を下げるなどすると、状況が改善するかもしれません。</string>
+    <string name="send_data_too_slow">ねとらじ配信を中止しました。送信が間に合いません。ビットレートを下げると、状況が改善するかもしれません。</string>
+    <string name="disable_rec">録音できませんでした</string>
+    <string name="broadcasting">配信中</string>
+    <string name="not_broadcasting">停止中</string>
+    <string name="disable_connect_server_authentication_required">ねとらじサーバに接続できませんでした。認証に失敗しました。</string>
+    <string name="disable_connect_server_mountpoint_in_use">ねとらじサーバに接続できませんでした。マウント名は使用中です。別のマウント名で放送してください。</string>
+    <string name="disable_connect_server_mountpoint_too_long">ねとらじサーバに接続できませんでした。マウント名が / のみか、あるいはマウント名が長すぎます。マウント名を正しく指定してください。</string>
+    <string name="disable_connect_server_content_type_not_supported">ねとらじサーバに接続できませんでした。サポート外のストリームです。</string>
+    <string name="disable_connect_server_too_many_sources_connected">ねとらじサーバに接続できませんでした。サーバが混み合っています。</string>
+    <string name="disable_connect_server_unknown_error">ねとらじサーバに接続できませんでした。原因不明のエラーです。</string>
+    <string name="disable_encode">エンコードできませんでした</string>
+    <string name="reference_site">関連サイト</string>
+    <string name="broadcasting_notification_title_format">%s 配信中</string>
+    <string name="broadcast_state">配信状況</string>
+    <string name="failed_rec_stop">配信が停止できませんでした</string>
+    <string name="listeners_num">リスナ数</string>
+    <string name="max_listeners_num">最大</string>
+    <string name="total_listeners_num">延べ</string>
+    <string name="broadcast_time">配信時間</string>
+    <string name="volume">音量</string>
+
+    <string name="help_main_url" formatted="false">http://garage.uraroji.com/software/ladio-star/%E4%BD%BF%E3%81%84%E6%96%B9/</string>
+    <string name="help_setting_url" formatted="false">http://garage.uraroji.com/software/ladio-star/%E4%BD%BF%E3%81%84%E6%96%B9/%E8%A8%AD%E5%AE%9A%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6/</string>
+
+</resources>

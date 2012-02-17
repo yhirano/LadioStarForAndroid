@@ -22,8 +22,6 @@
 
 package com.uraroji.garage.android.ladiostar;
 
-import android.net.Uri;
-
 /**
  * アプリケーションの静的な設定情報保持
  */
@@ -66,18 +64,6 @@ public class C {
      * 7 ok quality, really fast
      */
     public static final int DEFAULT_AUDIO_MP3_ENCODE_QUALITY = 7;
-
-    /**
-     * メイン画面でヘルプを選択した際に表示するサイトのURL
-     */
-    public static final Uri HELP_MAIN_URL = Uri
-            .parse("http://garage.uraroji.com/software/ladio-star/%E4%BD%BF%E3%81%84%E6%96%B9/");
-
-    /**
-     * 設定画面でヘルプを選択した際に表示するサイトのURL
-     */
-    public static final Uri HELP_SETTING_URL = Uri
-            .parse("http://garage.uraroji.com/software/ladio-star/%E4%BD%BF%E3%81%84%E6%96%B9/%E8%A8%AD%E5%AE%9A%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6/");
 
     /**
      * ログのタグ

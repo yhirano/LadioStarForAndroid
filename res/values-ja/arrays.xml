@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="server_entries">
+        <item>自動</item>
+        <item>std1.ladio.net:8000</item>
+        <item>std1.ladio.net:8010</item>
+        <item>std1.ladio.net:8020</item>
+        <item>std1.ladio.net:8030</item>
+        <item>std1.ladio.net:8040</item>
+        <item>std1.ladio.net:8050</item>
+        <item>std1.ladio.net:8060</item>
+        <item>std1.ladio.net:8070</item>
+        <item>std1.ladio.net:8080</item>
+        <item>std1.ladio.net:8090</item>
+    </string-array>
+    <string-array name="channel_entries">
+        <item>モノラル</item>
+        <item>ステレオ</item>
+    </string-array>
+    <string-array name="mp3_encode_quality_entries">
+        <!-- <item>最高</item> -->
+        <!-- <item>かなり高い</item> -->
+        <!-- <item>高い</item> -->
+        <item>高め</item>
+        <!-- <item>やや高め</item> -->
+        <item>標準</item>
+        <!-- <item>やや低め</item> -->
+        <item>低め</item>
+        <!-- <item>低い</item> -->
+        <item>かなり低い（かなり低速な端末向け）</item>
+    </string-array>
+
+</resources>

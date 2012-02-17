@@ -2,7 +2,7 @@
 <resources>
 
     <string-array name="server_entries">
-        <item>自動</item>
+        <item>Auto</item>
         <item>std1.ladio.net:8000</item>
         <item>std1.ladio.net:8010</item>
         <item>std1.ladio.net:8020</item>
@@ -48,8 +48,8 @@
         <!-- <item>128</item> -->
     </string-array>
     <string-array name="channel_entries">
-        <item>モノラル</item>
-        <item>ステレオ</item>
+        <item>Mono</item>
+        <item>Stereo</item>
     </string-array>
     <string-array name="channel_entryvalues">
         <item>1</item>
@@ -70,20 +70,18 @@
         <item>44100</item>
     </string-array>
     <string-array name="mp3_encode_quality_entries">
-
-        <!-- <item>最高</item> -->
-        <!-- <item>かなり高い</item> -->
-        <!-- <item>高い</item> -->
-        <item>高め</item>
-        <!-- <item>やや高め</item> -->
-        <item>標準</item>
-        <!-- <item>やや低め</item> -->
-        <item>低め</item>
-        <!-- <item>低い</item> -->
-        <item>かなり低い（かなり低速な端末向け）</item>
+        <!-- <item>Best</item> -->
+        <!-- <item>Highest</item> -->
+        <!-- <item>Higher</item> -->
+        <item>High</item>
+        <!-- <item>A little high</item> -->
+        <item>Normal</item>
+        <!-- <item>A little low</item> -->
+        <item>Low</item>
+        <!-- <item>Lower</item> -->
+        <item>Lowest (for very slow device)</item>
     </string-array>
     <string-array name="mp3_encode_quality_entryvalues">
-
         <!-- <item>0</item> -->
         <!-- <item>1</item> -->
         <!-- <item>2</item> -->
