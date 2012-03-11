@@ -56,7 +56,7 @@
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
     <string name="help">Help</string>
-    <string name="send_bugreport">An unexpected error occurred while running application the last. Do you want to send error report to the developer? This report are not include your privacy information.</string>
+    <string name="send_bugreport">An unexpected error occurred while running application the last. Do you send error report to the developer? This report are not include your privacy information.</string>
     <string name="mono">Mono</string>
     <string name="stereo">Stereo</string>
     <string name="unknown">Unknown</string>
