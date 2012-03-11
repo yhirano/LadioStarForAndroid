@@ -34,7 +34,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 /**
- * サービスで配信する際の配信サービスとの通信クラス
+ * 配信サービスとの通信クラス
  */
 public class BroadcastServiceConnector {
 
