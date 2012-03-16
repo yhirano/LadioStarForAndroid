@@ -31,7 +31,7 @@ import android.util.Log;
 
 import com.uraroji.garage.android.ladiostar.util.ByteRingBuffer;
 import com.uraroji.garage.android.ladiostar.util.ShortRingBuffer;
-import com.uraroji.garage.android.lame.SimpleLame;
+import com.uraroji.garage.android.lame.Lame;
 import com.uraroji.garage.android.netladiolib.Server;
 import com.uraroji.garage.android.netladiolib.ServersInfo;
 
@@ -604,20 +604,18 @@ public class VoiceSender {
         public void run() {
             Log.d(C.TAG, "Start Encode thread.");
 
+            Lame encoder = null;
             try {
-                SimpleLame.log(C.LOCAL_LOG);
+                Lame.log(C.LOCAL_LOG);
                 // Lame init
-                SimpleLame.init(mBroadcastConfig.getAudioSampleRate(),
-                        mBroadcastConfig.getAudioChannel(),
-                        mBroadcastConfig.getAudioSampleRate(),
-                        mBroadcastConfig.getAudioBrate(),
-                        mBroadcastConfig.getAudioMp3EncodeQuality(),
-                        mBroadcastConfig.getChannelTitle(),
-                        mBroadcastConfig.getChannelDjName(),
-                        null,
-                        String.valueOf(Calendar.getInstance().get(Calendar.YEAR)),
-                        mBroadcastConfig.getChannelDescription()
-                        );
+                encoder = new Lame.Builder(mBroadcastConfig.getAudioSampleRate(),
+                        mBroadcastConfig.getAudioChannel(), mBroadcastConfig.getAudioSampleRate(),
+                        mBroadcastConfig.getAudioBrate())
+                        .quality(mBroadcastConfig.getAudioMp3EncodeQuality())
+                        .id3tagTitle(mBroadcastConfig.getChannelTitle())
+                        .id3tagArtist(mBroadcastConfig.getChannelDjName())
+                        .id3tagYear(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)))
+                        .id3tagComment(mBroadcastConfig.getChannelDescription()).create();
                 Log.d(C.TAG,
                         "SimpleLame is initialized. (SampleRate="
                                 + String.valueOf(mBroadcastConfig
@@ -702,11 +700,11 @@ public class VoiceSender {
                     if (readSize != 0) {
                         switch (mBroadcastConfig.getAudioChannel()) {
                             case 1: // モノラルの場合
-                                encResult = SimpleLame.encode(readBuffer,
+                                encResult = encoder.encode(readBuffer,
                                         readBuffer, readSize, mp3buffer);
                                 break;
                             case 2: // ステレオの場合
-                                encResult = SimpleLame.encodeBufferInterleaved(
+                                encResult = encoder.encodeBufferInterleaved(
                                         readBuffer, readSize / 2, mp3buffer);
                                 break;
                             default: // ここに到達することはあり得ないはずだが一応エラーとする。
@@ -769,7 +767,7 @@ public class VoiceSender {
                     }
                 }
 
-                int flushResult = SimpleLame.flush(mp3buffer);
+                int flushResult = encoder.flush(mp3buffer);
                 if (flushResult < 0) {
                     Log.w(C.TAG, "Failed LAME flush(error=" + flushResult
                             + ").");
@@ -816,7 +814,7 @@ public class VoiceSender {
                     }
                 }
             } finally {
-                SimpleLame.close();
+                encoder.close();
                 Log.d(C.TAG, "SimpleLame is closed.");
 
                 Log.d(C.TAG, "Finish Encode thread.");
