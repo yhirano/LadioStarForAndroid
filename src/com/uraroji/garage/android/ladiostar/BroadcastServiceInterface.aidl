@@ -25,6 +25,7 @@ package com.uraroji.garage.android.ladiostar;
 import com.uraroji.garage.android.ladiostar.BroadcastConfig;
 import com.uraroji.garage.android.ladiostar.BroadcastInfo;
 import com.uraroji.garage.android.ladiostar.BroadcastStateChangedCallbackInterface;
+import com.uraroji.garage.android.ladiostar.LoudnessCallbackInterface;
 
 /**
  * 配信サービスのインターフェース
@@ -88,4 +89,18 @@ interface BroadcastServiceInterface {
      * @param callback 削除するコールバック
      */
     void unregisterBroadcastStateChangedCallback(BroadcastStateChangedCallbackInterface callback);
+
+    /**
+     * 音の大きさ通知するコールバックを登録
+     *
+     * @param callback 登録するコールバック
+     */
+    void registerLoudnessdCallback(LoudnessCallbackInterface callback);
+
+    /**
+     * 音の大きさを通知するコールバックを削除
+     *
+     * @param callback 削除するコールバック
+     */
+    void unregisterLoudnessCallback(LoudnessCallbackInterface callback);
 }

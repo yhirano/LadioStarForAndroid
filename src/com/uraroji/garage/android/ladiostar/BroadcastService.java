@@ -74,7 +74,7 @@ public class BroadcastService extends Service {
         super.onCreate();
 
         // 配信の開始時、停止時にメッセージを表示するためのHandlerを登録する
-        mVoiceSender.addBroadcastStateChangedHandle(new Handler() {
+        mVoiceSender.addBroadcastStateChangedHandler(new Handler() {
 
             @Override
             public void handleMessage(Message msg) {
@@ -186,8 +186,8 @@ public class BroadcastService extends Service {
             }
         });
 
-        // コールバックを配信するためのHandlerを登録する
-        mVoiceSender.addBroadcastStateChangedHandle(new Handler() {
+        // 配信状態変化通知のコールバックを配信するためのHandlerを登録する
+        mVoiceSender.addBroadcastStateChangedHandler(new Handler() {
 
             @Override
             public void handleMessage(Message msg) {
@@ -204,11 +204,11 @@ public class BroadcastService extends Service {
              * @param msg メッセージ
              */
             private void execCallback(Message msg) {
-                final int n = broadcastStateChangedCallbackList
+                final int n = mBroadcastStateChangedCallbackList
                         .beginBroadcast();
 
                 for (int i = 0; i < n; ++i) {
-                    final BroadcastStateChangedCallbackInterface callback = broadcastStateChangedCallbackList
+                    final BroadcastStateChangedCallbackInterface callback = mBroadcastStateChangedCallbackList
                             .getBroadcastItem(i);
                     if (callback != null) {
                         try {
@@ -222,7 +222,7 @@ public class BroadcastService extends Service {
                     }
                 }
 
-                broadcastStateChangedCallbackList.finishBroadcast();
+                mBroadcastStateChangedCallbackList.finishBroadcast();
             }
 
             /**
@@ -280,6 +280,41 @@ public class BroadcastService extends Service {
             }
         });
 
+        // 音の大きさ通知のコールバックを配信するためのHandlerを登録する
+        mVoiceSender.addLoudnessdHandler(new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                // コールバックを実行する
+                execCallback(msg);
+            }
+
+            /**
+             * コールバックを実行する。
+             * 
+             * @param msg メッセージ
+             */
+            private void execCallback(Message msg) {
+                final int n = mLoudnessCallbackList.beginBroadcast();
+
+                for (int i = 0; i < n; ++i) {
+                    final LoudnessCallbackInterface callback = mLoudnessCallbackList
+                            .getBroadcastItem(i);
+                    if (callback != null) {
+                        try {
+                            callback.loudness(msg.arg1);
+                        } catch (RemoteException e) {
+                            // 例外はどうしようもないので無視しておく
+                            Log.w(C.TAG,
+                                    "RemoteException("
+                                            + e.toString() + ") occurred.");
+                        }
+                    }
+                }
+
+                mLoudnessCallbackList.finishBroadcast();
+            }
+        });
+
         // 着信を感知する
         mTelephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
         mTelephonyManager.listen(mPhoneStateListener,
@@ -315,7 +350,12 @@ public class BroadcastService extends Service {
     /**
      * 配信状態が変化した通知をするコールバックのリスト
      */
-    private final RemoteCallbackList<BroadcastStateChangedCallbackInterface> broadcastStateChangedCallbackList = new RemoteCallbackList<BroadcastStateChangedCallbackInterface>();
+    private final RemoteCallbackList<BroadcastStateChangedCallbackInterface> mBroadcastStateChangedCallbackList = new RemoteCallbackList<BroadcastStateChangedCallbackInterface>();
+
+    /**
+     * 音の大きさ通知をするコールバックのリスト
+     */
+    private final RemoteCallbackList<LoudnessCallbackInterface> mLoudnessCallbackList = new RemoteCallbackList<LoudnessCallbackInterface>();
 
     @Override
     public IBinder onBind(Intent arg0) {
@@ -362,14 +402,26 @@ public class BroadcastService extends Service {
         public void registerBroadcastStateChangedCallback(
                 BroadcastStateChangedCallbackInterface callback)
                 throws RemoteException {
-            broadcastStateChangedCallbackList.register(callback);
+            mBroadcastStateChangedCallbackList.register(callback);
         }
 
         @Override
         public void unregisterBroadcastStateChangedCallback(
                 BroadcastStateChangedCallbackInterface callback)
                 throws RemoteException {
-            broadcastStateChangedCallbackList.unregister(callback);
+            mBroadcastStateChangedCallbackList.unregister(callback);
+        }
+
+        @Override
+        public void registerLoudnessdCallback(LoudnessCallbackInterface callback)
+                throws RemoteException {
+            mLoudnessCallbackList.register(callback);
+        }
+
+        @Override
+        public void unregisterLoudnessCallback(LoudnessCallbackInterface callback)
+                throws RemoteException {
+            mLoudnessCallbackList.unregister(callback);
         }
     };
 }

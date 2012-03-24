@@ -57,7 +57,7 @@ public class VoiceSender {
     static {
         System.loadLibrary("mp3lame");
 
-        setUserAgentInfo(null, null);
+        setUserAgentInfo(null, null); 
     }
 
     /**
@@ -244,6 +244,11 @@ public class VoiceSender {
     public static final int MSG_STOP_WAIT_RECONNECT = 24;
 
     /**
+     * 音の大きさの通知
+     */
+    public static final int MSG_LOUDNESS = 0;
+    
+    /**
      * 動作していない
      */
     public static final int BROADCAST_STATE_STOPPED = 0;
@@ -340,12 +345,22 @@ public class VoiceSender {
     /**
      * 配信の状態変化を通知するハンドラのリスト
      */
-    private ArrayList<Handler> mHandlerList = new ArrayList<Handler>();;
+    private ArrayList<Handler> mBroadcastStateChangedHandlerList = new ArrayList<Handler>();;
 
     /**
-     * mHandlerListのロックオブジェクト
+     * {@link VoiceSender#mBroadcastStateChangedHandlerList}のロックオブジェクト
      */
-    private final Object mHandlerListLock = new Object();
+    private final Object mBroadcastStateChangedHandlerListLock = new Object();
+
+    /**
+     * 音の大きさを通知するハンドラのリスト
+     */
+    private ArrayList<Handler> mLoudnessHandlerList = new ArrayList<Handler>();;
+
+    /**
+     * {@link VoiceSender#mLoudnessHandlerList}のロックオブジェクト
+     */
+    private final Object mLoudnessHandlerListLock = new Object();
 
     /**
      * コンストラクタ
@@ -497,6 +512,8 @@ public class VoiceSender {
                                     // 音声のボリュームを調整する
                                     changeVolume(recBuffer, readSize);
 
+                                    notifyLundness(recBuffer, readSize);
+                                    
                                     try {
                                         // バッファに書き込む
                                         mPcmBuffer.put(recBuffer, 0, readSize);
@@ -577,6 +594,39 @@ public class VoiceSender {
                     }
                     buf[i] = vs;
                 }
+            }
+        }
+
+        /**
+         * 音の大きさを通知する
+         * 
+         * @param buf PCMバッファ。
+         * @param size バッファの長さ
+         */
+        private void notifyLundness(short[] buf, int size) {
+            short max = 0;
+            for (int i = 0; i < size; ++i) {
+                max = (short) Math.max(Math.abs(buf[i]), max);
+            }
+
+            if (C.LOCAL_LOG) {
+                Log.v(C.TAG, "Loudness " + max);
+            }
+
+            for (Handler h : getLoudnessHandlerListClone()) {
+                h.sendMessage(h.obtainMessage(MSG_LOUDNESS, max, max));
+            }
+        }
+
+        /**
+         * 音の大きさを通知するハンドラーリストのクローンしたリストを取得する。 浅いクローンなので注意。
+         * 
+         * @return 音の大きさを通知するハンドラーリストのクローンしたリスト
+         */
+        @SuppressWarnings("unchecked")
+        private ArrayList<Handler> getLoudnessHandlerListClone() {
+            synchronized (mLoudnessHandlerListLock) {
+                return (ArrayList<Handler>) mLoudnessHandlerList.clone();
             }
         }
     }
@@ -1475,10 +1525,10 @@ public class VoiceSender {
      * @see VoiceSender#MSG_RECONNECT_STARTED
      * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
      */
-    public final void addBroadcastStateChangedHandle(Handler handler) {
+    public final void addBroadcastStateChangedHandler(Handler handler) {
         if (handler != null) {
-            synchronized (mHandlerListLock) {
-                mHandlerList.add(handler);
+            synchronized (mBroadcastStateChangedHandlerListLock) {
+                mBroadcastStateChangedHandlerList.add(handler);
             }
         }
     }
@@ -1488,18 +1538,51 @@ public class VoiceSender {
      * 
      * @param handler 動作の状態変化を通知するハンドラ
      */
-    public final void removeBroadcastStateChangedHandle(Handler handler) {
-        synchronized (mHandlerListLock) {
-            mHandlerList.remove(handler);
+    public final void removeBroadcastStateChangedHandler(Handler handler) {
+        synchronized (mBroadcastStateChangedHandlerListLock) {
+            mBroadcastStateChangedHandlerList.remove(handler);
         }
     }
 
     /**
      * 動作の状態変化を通知するハンドラをクリアする
      */
-    public final void clearBroadcastStateChangedHandle() {
-        synchronized (mHandlerListLock) {
-            mHandlerList.clear();
+    public final void clearBroadcastStateChangedHandler() {
+        synchronized (mBroadcastStateChangedHandlerListLock) {
+            mBroadcastStateChangedHandlerList.clear();
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラを追加する
+     * 
+     * @param handler 音の大きさを通知するハンドラ
+     */
+    public final void addLoudnessdHandler(Handler handler) {
+        if (handler != null) {
+            synchronized (mLoudnessHandlerListLock) {
+                mLoudnessHandlerList.add(handler);
+            }
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラを削除する
+     * 
+     * @param handler 音の大きさを通知するハンドラ
+     */
+    public final void removeLoudnessHandler(Handler handler) {
+        synchronized (mLoudnessHandlerListLock) {
+            mLoudnessHandlerList.remove(handler);
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラをクリアする
+     */
+    public final void clearLoudnessHandler() {
+        synchronized (mLoudnessHandlerListLock) {
+            mLoudnessHandlerList.clear();
         }
     }
 
@@ -1509,7 +1592,7 @@ public class VoiceSender {
      * @param what 通知する状態
      */
     private void notifyRecStateChangedHandle(int what) {
-        for (Handler h : getHandlerListClone()) {
+        for (Handler h : getBroadcastStateChangedHandlerListClone()) {
             if (h != null) {
                 h.sendEmptyMessage(what);
             }
@@ -1522,9 +1605,9 @@ public class VoiceSender {
      * @return 再生状態が変わった際のハンドラーリストのクローンしたリスト
      */
     @SuppressWarnings("unchecked")
-    private ArrayList<Handler> getHandlerListClone() {
-        synchronized (mHandlerListLock) {
-            return (ArrayList<Handler>) mHandlerList.clone();
+    private ArrayList<Handler> getBroadcastStateChangedHandlerListClone() {
+        synchronized (mBroadcastStateChangedHandlerListLock) {
+            return (ArrayList<Handler>) mBroadcastStateChangedHandlerList.clone();
         }
     }
 

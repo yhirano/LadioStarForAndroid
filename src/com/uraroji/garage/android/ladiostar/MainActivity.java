@@ -45,6 +45,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
@@ -85,6 +86,8 @@ public class MainActivity extends Activity {
     
     private TextView mBroadcastStatusTextView;
 
+    private ProgressBar mLoudnessProgressBar;
+    
     private TextView mListenersNumTextView;
 
     private TextView mBroadcastTimeTextView;
@@ -169,6 +172,17 @@ public class MainActivity extends Activity {
     };
 
     /**
+     * 音の大きさを表示するためのHandler
+     */
+    private final Handler mLoudnessHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            mLoudnessProgressBar.setProgress(Math.abs(msg.arg1));
+        }
+    };
+
+    /**
      * 自動でリスナー数を取得
      */
     private final BroadcastListenerFetcher mBroadcastListenerFetcher = new BroadcastListenerFetcher();
@@ -239,6 +253,9 @@ public class MainActivity extends Activity {
 
         mBroadcastStatusTextView = (TextView) findViewById(R.id.BroadcastStatusTextView);
 
+        mLoudnessProgressBar = (ProgressBar) findViewById(R.id.LoudnessProgressBar);
+        mLoudnessProgressBar.setMax(Short.MAX_VALUE);
+        
         mListenersNumTextView = (TextView) findViewById(R.id.ListenersNumTextView);
         
         mBroadcastTimeTextView = (TextView) findViewById(R.id.BroadcastTimeTextView);
@@ -347,6 +364,8 @@ public class MainActivity extends Activity {
                 .addBroadcastStateChangedHandler(mBroadcastWatchHandler);
         BroadcastManager.getConnector()
                 .addServiceConnectChangeHandler(mServiceWatchHandler);
+        // 音の大きさを表示するために、BoladcastManagerにHandlerを設定する。
+        BroadcastManager.getConnector().addLoudnessHandler(mLoudnessHandler);
 
         // リスナー数の取得開始
         mBroadcastListenerFetcher.start();
@@ -375,6 +394,8 @@ public class MainActivity extends Activity {
                 .removeBroadcastStateChangedHandler(mBroadcastWatchHandler);
         BroadcastManager.getConnector()
                 .removeServiceConnectChangeHandler(mServiceWatchHandler);
+        // 音の大きさを表示するための設定済みHandlerを削除する
+        BroadcastManager.getConnector().removeLoudnessHandler(mLoudnessHandler);
 
         // リスナー数の取得終了
         mBroadcastListenerFetcher.shutdown();

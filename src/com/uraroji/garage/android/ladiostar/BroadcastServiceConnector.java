@@ -72,12 +72,12 @@ public class BroadcastServiceConnector {
     /**
      * 配信の状態変化を通知するハンドラのリスト
      */
-    private ArrayList<Handler> mBroadcastStateChangeHandlerList = new ArrayList<Handler>();;
+    private ArrayList<Handler> mBroadcastStateChangedHandlerList = new ArrayList<Handler>();;
 
     /**
-     * mBroadcastStateChangeHandlerListのロックオブジェクト
+     * {@link BroadcastServiceConnector#mBroadcastStateChangedHandlerList}のロックオブジェクト
      */
-    private final Object mBroadcastStateChangeHandlerListLock = new Object();
+    private final Object mBroadcastStateChangedHandlerListLock = new Object();
 
     /**
      * サービス接続の状態変化を通知するハンドラのリスト
@@ -85,9 +85,19 @@ public class BroadcastServiceConnector {
     private ArrayList<Handler> mServiceConnectChangeHandlerList = new ArrayList<Handler>();;
 
     /**
-     * mServiceConnectChangeHandlerListのロックオブジェクト
+     * {@link BroadcastServiceConnector#mServiceConnectChangeHandlerList}のロックオブジェクト
      */
     private final Object mServiceConnectChangeHandlerListLock = new Object();
+
+    /**
+     * 音の大きさを通知するハンドラのリスト
+     */
+    private ArrayList<Handler> mLoudnessHandlerList = new ArrayList<Handler>();;
+
+    /**
+     * {@link BroadcastServiceConnector#mLoudnessHandlerList}のロックオブジェクト
+     */
+    private final Object mLoudnessHandlerListLock = new Object();
 
     /**
      * 初期化 一番はじめに配信をする前に初期化すること
@@ -285,9 +295,9 @@ public class BroadcastServiceConnector {
      * @see VoiceSender#MSG_STOP_WAIT_RECONNECT
      */
     public void addBroadcastStateChangedHandler(Handler handler) {
-        synchronized (mBroadcastStateChangeHandlerListLock) {
+        synchronized (mBroadcastStateChangedHandlerListLock) {
             if (handler != null) {
-                mBroadcastStateChangeHandlerList.add(handler);
+                mBroadcastStateChangedHandlerList.add(handler);
             }
         }
     }
@@ -298,17 +308,17 @@ public class BroadcastServiceConnector {
      * @param handler 動作の状態変化を通知するハンドラ
      */
     public void removeBroadcastStateChangedHandler(Handler handler) {
-        synchronized (mBroadcastStateChangeHandlerListLock) {
-            mBroadcastStateChangeHandlerList.remove(handler);
+        synchronized (mBroadcastStateChangedHandlerListLock) {
+            mBroadcastStateChangedHandlerList.remove(handler);
         }
     }
 
     /**
      * 配信の状態変化を通知するハンドラをクリアする
      */
-    public void clearBroadcastStateChangeHandler() {
-        synchronized (mBroadcastStateChangeHandlerListLock) {
-            mBroadcastStateChangeHandlerList.clear();
+    public void clearBroadcastStateChangedHandler() {
+        synchronized (mBroadcastStateChangedHandlerListLock) {
+            mBroadcastStateChangedHandlerList.clear();
         }
     }
 
@@ -318,7 +328,7 @@ public class BroadcastServiceConnector {
      * @param what
      */
     private void notifyBroadcastStateChanged(int what) {
-        for (Handler h : getBroadcastStateChangeHandlerListClone()) {
+        for (Handler h : getBroadcastStateChangedHandlerListClone()) {
             if (h != null) {
                 h.sendEmptyMessage(what);
             }
@@ -331,9 +341,67 @@ public class BroadcastServiceConnector {
      * @return 配信の状態変化を通知するハンドラリストのクローンしたリスト
      */
     @SuppressWarnings("unchecked")
-    private ArrayList<Handler> getBroadcastStateChangeHandlerListClone() {
-        synchronized (mBroadcastStateChangeHandlerListLock) {
-            return (ArrayList<Handler>) mBroadcastStateChangeHandlerList.clone();
+    private ArrayList<Handler> getBroadcastStateChangedHandlerListClone() {
+        synchronized (mBroadcastStateChangedHandlerListLock) {
+            return (ArrayList<Handler>) mBroadcastStateChangedHandlerList.clone();
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラを追加する
+     * 
+     * @param handler 音の大きさを通知するハンドラ
+     */
+    public void addLoudnessHandler(Handler handler) {
+        synchronized (mLoudnessHandlerListLock) {
+            if (handler != null) {
+                mLoudnessHandlerList.add(handler);
+            }
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラを削除する
+     * 
+     * @param handler 音の大きさを通知するハンドラ
+     */
+    public void removeLoudnessHandler(Handler handler) {
+        synchronized (mLoudnessHandlerListLock) {
+            mLoudnessHandlerList.remove(handler);
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラをクリアする
+     */
+    public void clearLoudnessHandler() {
+        synchronized (mLoudnessHandlerListLock) {
+            mLoudnessHandlerList.clear();
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラにメッセージを送信する
+     * 
+     * @param loudness
+     */
+    private void notifyLoudness(int loudness) {
+        for (Handler h : getLoudnessHandlerListClone()) {
+            if (h != null) {
+                h.sendMessage(h.obtainMessage(VoiceSender.MSG_LOUDNESS, loudness, loudness));
+            }
+        }
+    }
+
+    /**
+     * 音の大きさを通知するハンドラリストのクローンしたリストを取得する。 浅いクローンなので注意。
+     * 
+     * @return 音の大きさを通知するハンドラリストのクローンしたリスト
+     */
+    @SuppressWarnings("unchecked")
+    private ArrayList<Handler> getLoudnessHandlerListClone() {
+        synchronized (mLoudnessHandlerListLock) {
+            return (ArrayList<Handler>) mLoudnessHandlerList.clone();
         }
     }
 
@@ -400,13 +468,24 @@ public class BroadcastServiceConnector {
     }
 
     /**
-     * 再生サービスからのコールバック
+     * 配信サービスからの配信状態変化通知コールバック
      */
-    BroadcastStateChangedCallbackInterface mRemoteCallback = new BroadcastStateChangedCallbackInterface.Stub() {
+    private BroadcastStateChangedCallbackInterface mBroadcastStateChangedRemoteCallback = new BroadcastStateChangedCallbackInterface.Stub() {
 
         @Override
         public void changed(int changedState) throws RemoteException {
             notifyBroadcastStateChanged(changedState);
+        }
+    };
+
+    /**
+     * 配信サービスからの配信状態変化通知コールバック
+     */
+    private LoudnessCallbackInterface mLoudnessRemoteCallback = new LoudnessCallbackInterface.Stub() {
+
+        @Override
+        public void loudness(int loudness) throws RemoteException {
+            notifyLoudness(loudness);
         }
     };
 
@@ -422,7 +501,9 @@ public class BroadcastServiceConnector {
                     .asInterface(service);
             try {
                 mBroadcastServiceInterface
-                        .registerBroadcastStateChangedCallback(mRemoteCallback);
+                        .registerBroadcastStateChangedCallback(mBroadcastStateChangedRemoteCallback);
+                mBroadcastServiceInterface
+                        .registerLoudnessdCallback(mLoudnessRemoteCallback);
             } catch (RemoteException e) {
                 // 例外はどうしようもないので無視しておく
                 Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd.");
@@ -435,7 +516,9 @@ public class BroadcastServiceConnector {
         public void onServiceDisconnected(ComponentName name) {
             try {
                 mBroadcastServiceInterface
-                        .unregisterBroadcastStateChangedCallback(mRemoteCallback);
+                        .unregisterBroadcastStateChangedCallback(mBroadcastStateChangedRemoteCallback);
+                mBroadcastServiceInterface
+                        .unregisterLoudnessCallback(mLoudnessRemoteCallback);
             } catch (RemoteException e) {
                 // 例外はどうしようもないので無視しておく
                 Log.w(C.TAG, "RemoteException(" + e.toString() + ") occuerd.");
