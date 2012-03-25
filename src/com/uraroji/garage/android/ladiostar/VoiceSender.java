@@ -269,6 +269,11 @@ public class VoiceSender {
     public static final int BROADCAST_STATE_STOPPING = 4;
 
     /**
+     * 音の大きさの最大値
+     */
+    public static final int MAX_LOUDNESS = Short.MAX_VALUE;
+
+    /**
      * ねとらじサーバに通知するUserAgent
      */
     private static String sUserAgent;
@@ -604,6 +609,11 @@ public class VoiceSender {
          * @param size バッファの長さ
          */
         private void notifyLundness(short[] buf, int size) {
+            final ArrayList<Handler> handerList = getLoudnessHandlerListClone();
+            if (handerList.isEmpty()) {
+                return;
+            }
+            
             short max = 0;
             for (int i = 0; i < size; ++i) {
                 max = (short) Math.max(Math.abs(buf[i]), max);
@@ -613,7 +623,7 @@ public class VoiceSender {
                 Log.v(C.TAG, "Loudness " + max);
             }
 
-            for (Handler h : getLoudnessHandlerListClone()) {
+            for (Handler h : handerList) {
                 h.sendMessage(h.obtainMessage(MSG_LOUDNESS, max, max));
             }
         }

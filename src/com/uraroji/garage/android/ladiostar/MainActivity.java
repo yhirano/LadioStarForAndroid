@@ -178,7 +178,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void handleMessage(Message msg) {
-            mLoudnessProgressBar.setProgress(Math.abs(msg.arg1));
+            mLoudnessProgressBar.setProgress(msg.arg1);
         }
     };
 
@@ -254,7 +254,7 @@ public class MainActivity extends Activity {
         mBroadcastStatusTextView = (TextView) findViewById(R.id.BroadcastStatusTextView);
 
         mLoudnessProgressBar = (ProgressBar) findViewById(R.id.LoudnessProgressBar);
-        mLoudnessProgressBar.setMax(Short.MAX_VALUE);
+        mLoudnessProgressBar.setMax(VoiceSender.MAX_LOUDNESS);
         
         mListenersNumTextView = (TextView) findViewById(R.id.ListenersNumTextView);
         
