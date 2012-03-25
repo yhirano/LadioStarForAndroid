@@ -80,15 +80,16 @@ public class MainActivity extends Activity {
     private final static int MENU_ID_SETTING = Menu.FIRST + 3;
 
     /**
-     * 音の大きさ表示の最大値
-     */
-    private final static int MAX_LOUDNESS = 100;
-    
-    /**
      * ミュート前の音量
      */
     private char mVolumeRateBeforeMute = 100;
     
+    /**
+     * 音の大きさ表示の最大値。<br />
+     * 話し声の場合でも60程度の値になるので、100を表示上の最大値にしておく。
+     */
+    private final static int MAX_LOUDNESS = 100;
+
     private TextView mBroadcastStatusTextView;
 
     private ProgressBar mLoudnessProgressBar;
