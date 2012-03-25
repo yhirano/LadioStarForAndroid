@@ -445,11 +445,11 @@ public class VoiceSender {
                         .getAudioChannel());
 
                 // 録音に最低限必要なバッファサイズ
-                final int recBufferSizeMin = AudioRecord.getMinBufferSize(
+                final int recBufferSize = AudioRecord.getMinBufferSize(
                         mBroadcastConfig.getAudioSampleRate(), channelConfig,
                         AudioFormat.ENCODING_PCM_16BIT);
                 // バッファサイズが取得できない。サンプリングレート等の設定を端末がサポートしていない可能性がある。
-                if (recBufferSizeMin < 0) {
+                if (recBufferSize < 0) {
                     mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
                     notifyRecStateChangedHandle(MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS); // エラー名を変える
                     return;
@@ -458,11 +458,7 @@ public class VoiceSender {
                  * 録音に最低限必要なバッファサイズよりも、エンコード待ちバッファサイズの方が小さい場合は否応なしに中止にする。
                  * PCMバッファサイズを大きくすること。
                  */
-                assert (recBufferSizeMin > mPcmBuffer.size());
-                // 録音バッファサイズ。指定の秒数分だけ確保する。
-                final int recBufferSize = mBroadcastConfig.getAudioSampleRate()
-                        * mBroadcastConfig.getAudioChannel() * 2
-                        * C.REC_BUFFER_SEC;
+                assert (recBufferSize > mPcmBuffer.size());
                 Log.d(C.TAG,
                         "Recording buffersize is "
                                 + String.valueOf(recBufferSize) + " bytes.");
