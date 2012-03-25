@@ -80,6 +80,11 @@ public class MainActivity extends Activity {
     private final static int MENU_ID_SETTING = Menu.FIRST + 3;
 
     /**
+     * 音の大きさ表示の最大値
+     */
+    private final static int MAX_LOUDNESS = 100;
+    
+    /**
      * ミュート前の音量
      */
     private char mVolumeRateBeforeMute = 100;
@@ -178,7 +183,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void handleMessage(Message msg) {
-            mLoudnessProgressBar.setProgress(msg.arg1);
+            mLoudnessProgressBar.setProgress((msg.arg1 < MAX_LOUDNESS) ? msg.arg1 : MAX_LOUDNESS);
         }
     };
 
@@ -254,7 +259,7 @@ public class MainActivity extends Activity {
         mBroadcastStatusTextView = (TextView) findViewById(R.id.BroadcastStatusTextView);
 
         mLoudnessProgressBar = (ProgressBar) findViewById(R.id.LoudnessProgressBar);
-        mLoudnessProgressBar.setMax(VoiceSender.MAX_LOUDNESS);
+        mLoudnessProgressBar.setMax(MAX_LOUDNESS);
         
         mListenersNumTextView = (TextView) findViewById(R.id.ListenersNumTextView);
         
