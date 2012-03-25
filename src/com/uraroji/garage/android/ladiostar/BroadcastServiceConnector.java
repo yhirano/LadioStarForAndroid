@@ -100,6 +100,11 @@ public class BroadcastServiceConnector {
     private final Object mLoudnessHandlerListLock = new Object();
 
     /**
+     * サービスがバインド済みか
+     */
+    private boolean mIsBind = false;
+
+    /**
      * 初期化 一番はじめに配信をする前に初期化すること
      * 
      * @param context コンテキスト。アプリケーションのコンテキストを渡すこと。
@@ -109,7 +114,7 @@ public class BroadcastServiceConnector {
 
         Intent intent = new Intent(BroadcastServiceInterface.class.getName());
         context.startService(intent); // Broadcastサービス開始
-        context.bindService(intent, mBroadcastServiceConn,
+        mIsBind = context.bindService(intent, mBroadcastServiceConn,
                 Context.BIND_AUTO_CREATE);
     }
 
@@ -165,7 +170,10 @@ public class BroadcastServiceConnector {
             Log.v(C.TAG, "Release VoiceSender resouce.");
         }
 
-        mContext.unbindService(mBroadcastServiceConn);
+        if (mIsBind == true) {
+            mContext.unbindService(mBroadcastServiceConn);
+            mIsBind = false;
+        }
         // 配信中で無い場合はサービスを止める
         if (getBroadcastState() == VoiceSender.BROADCAST_STATE_STOPPED) {
             mContext.stopService(new Intent(BroadcastServiceInterface.class
