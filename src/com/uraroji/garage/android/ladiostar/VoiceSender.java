@@ -594,6 +594,16 @@ public class VoiceSender {
         }
 
         /**
+         * 録音した音の大きさの総和の2乗を格納しておくための領域
+         */
+        private double mLoudnessSquareTotal = 0;
+
+        /**
+         * {@link VoiceSender#mLoudnessSquareTotal}にため込んだ量
+         */
+        private int mLoudnessTotalLength = 0;
+
+        /**
          * 音の大きさを通知する
          * 
          * @param buf PCMバッファ。
@@ -604,21 +614,30 @@ public class VoiceSender {
             if (handerList.isEmpty()) {
                 return;
             }
-            
-            double rms = 0;
+
+            // 音の大きさを通知通知するまでに計測するバッファの長さ
+            final int limit = (mBroadcastConfig.getAudioSampleRate()
+                    * mBroadcastConfig.getAudioChannel()) / C.LOUDNESS_NOTIFY_TIMES_PER_SEC;
+
             for (int i = 0; i < size; ++i) {
-                rms += buf[i] * buf[i];
-            }
-            rms = Math.sqrt(rms / size);
+                mLoudnessSquareTotal += buf[i] * buf[i];
+                ++mLoudnessTotalLength;
 
-            final double rmsdB = 20.0 * Math.log10(rms);
+                // 一定量の録音バッファのRMSが計算し終わったら、音の大きさを送信する
+                if (mLoudnessTotalLength >= limit) {
+                    final double rmsdB = 20.0 * Math.log10(Math.sqrt(mLoudnessSquareTotal / mLoudnessTotalLength));
 
-            if (C.LOCAL_LOG) {
-                Log.v(C.TAG, "Loudness " + rmsdB);
-            }
+                    if (C.LOCAL_LOG) {
+                        Log.v(C.TAG, "Loudness " + rmsdB);
+                    }
 
-            for (Handler h : handerList) {
-                h.sendMessage(h.obtainMessage(MSG_LOUDNESS, (int)rmsdB, (int)rmsdB));
+                    for (Handler h : handerList) {
+                        h.sendMessage(h.obtainMessage(MSG_LOUDNESS, (int)rmsdB, (int)rmsdB));
+                    }
+                    
+                    mLoudnessSquareTotal = 0;
+                    mLoudnessTotalLength = 0;
+                }
             }
         }
 

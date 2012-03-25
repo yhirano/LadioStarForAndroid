@@ -122,6 +122,13 @@ public class C {
     public static final long WAIT_RECONNECT_MSEC = 4000;
 
     /**
+     * 1秒間に何回音の大きさを通知するか<br />
+     * <br />
+     * 1以上の整数を指定すること。
+     */
+    public static final int LOUDNESS_NOTIFY_TIMES_PER_SEC = 5;
+
+    /**
      * NotificationのID。<br />
      * ユニークなIDを取得するために、R.layout.mainのリソースIDを使う。
      */
