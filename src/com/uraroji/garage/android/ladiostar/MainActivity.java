@@ -1039,6 +1039,7 @@ public class MainActivity extends Activity {
             default:
                 mBroadcastStatusTextView.setText(R.string.not_broadcasting);
                 mStartStopButton.setText(R.string.start);
+                mLoudnessProgressBar.setProgress(0);
                 break;
         }
     }
