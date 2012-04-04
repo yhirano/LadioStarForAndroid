@@ -39,7 +39,7 @@ public class RandomStringUtilsTest extends TestCase {
         random(1000, 15);
     }
 
-    private void random(int paternNum, int length) {
+    private static void random(int paternNum, int length) {
         String[] strings = new String[paternNum];
 
         // Create random strings.
