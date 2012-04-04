@@ -385,14 +385,14 @@ public class VoiceSender {
         }
 
         /*
-         * PCMバッファ（エンコード待ちバッファ）を生成する PCMバッファサイズは指定の秒数分だけ確保する。 16bit
-         * PCMなので、サンプリングレート * チャンネル数 * 2byte(16bit) * 秒数でバッファサイズを計算
+         * PCMバッファ（エンコード待ちバッファ）を生成する PCMバッファサイズは指定の秒数分だけ確保する。
+         * サンプリングレート * チャンネル数 * 秒数でバッファサイズを計算する。
          */
         synchronized (mPcmBufferLock) {
-            mPcmBuffer = new ShortRingBuffer((broadcastConfig.getAudioSampleRate()
-                    * broadcastConfig.getAudioChannel() * 2 * C.PCM_BUFFER_SEC) + 2);
+            mPcmBuffer = new ShortRingBuffer(broadcastConfig.getAudioSampleRate()
+                    * broadcastConfig.getAudioChannel() * C.PCM_BUFFER_SEC);
         }
-        Log.d(C.TAG, "PCM buffersize is " + String.valueOf(mPcmBuffer.size() * 2)
+        Log.d(C.TAG, "PCM buffersize is " + String.valueOf(mPcmBuffer.capacity() * 2)
                 + " bytes.");
 
         /*
@@ -400,9 +400,9 @@ public class VoiceSender {
          */
         synchronized (mMp3BufferLock) {
             mMp3Buffer = new ByteRingBuffer(
-                    (((broadcastConfig.getAudioBrate() / 8) * 1024) * C.MP3_BUFFER_SEC) + 2);
+                    ((broadcastConfig.getAudioBrate() / 8) * 1024) * C.MP3_BUFFER_SEC);
         }
-        Log.d(C.TAG, "MP3 buffersize is " + String.valueOf(mMp3Buffer.size())
+        Log.d(C.TAG, "MP3 buffersize is " + String.valueOf(mMp3Buffer.capacity())
                 + " bytes.");
 
         mBroadcastState.set(BROADCAST_STATE_CONNECTING); // 動作の開始フラグを立てる
@@ -458,7 +458,7 @@ public class VoiceSender {
                  * 録音に最低限必要なバッファサイズよりも、エンコード待ちバッファサイズの方が小さい場合は否応なしに中止にする。
                  * PCMバッファサイズを大きくすること。
                  */
-                assert (recBufferSize > mPcmBuffer.size());
+                assert (recBufferSize > mPcmBuffer.capacity());
                 Log.d(C.TAG,
                         "Recording buffersize is "
                                 + String.valueOf(recBufferSize) + " bytes.");

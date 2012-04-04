@@ -39,20 +39,29 @@ public final class ByteRingBuffer {
     /**
      * Constructor.
      * 
-     * @param size Size of ring buffer. (NOT bytes.)
+     * @param capacity Capacity of ring buffer. (NOT bytes.)
      */
-    public ByteRingBuffer(int size) {
-        this.size = size;
+    public ByteRingBuffer(int capacity) {
+        size = capacity + 1;
         buffer = new byte[size];
     }
 
     /**
-     * Return size of ring buffer.
+     * Return size of ring buffer. (NOT capacity.)
      * 
      * @return Size of ring buffer.
      */
     public int size() {
-        return buffer.length;
+        return size;
+    }
+
+    /**
+     * Return capacity of ring buffer.
+     * 
+     * @return Capacity of ring buffer.
+     */
+    public int capacity() {
+        return size() - 1;
     }
 
     /**
