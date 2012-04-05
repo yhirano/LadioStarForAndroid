@@ -2,7 +2,7 @@
 <resources>
 
     <string-array name="server_entries">
-        <item>Auto</item>
+        <item>Auto (recommend)</item>
         <item>std1.ladio.net:8000</item>
         <item>std1.ladio.net:8010</item>
         <item>std1.ladio.net:8020</item>
@@ -60,7 +60,7 @@
         <item>11025Hz</item>
         <item>16000Hz</item>
         <item>22050Hz</item>
-        <item>44100Hz</item>
+        <item>44100Hz (recommend)</item>
     </string-array>
     <string-array name="sample_rate_entryvalues">
         <item>8000</item>

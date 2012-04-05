@@ -2,7 +2,7 @@
 <resources>
 
     <string-array name="server_entries">
-        <item>自動</item>
+        <item>自動 （推奨）</item>
         <item>std1.ladio.net:8000</item>
         <item>std1.ladio.net:8010</item>
         <item>std1.ladio.net:8020</item>
@@ -17,6 +17,13 @@
     <string-array name="channel_entries">
         <item>モノラル</item>
         <item>ステレオ</item>
+    </string-array>
+    <string-array name="sample_rate_entries">
+        <item>8000Hz</item>
+        <item>11025Hz</item>
+        <item>16000Hz</item>
+        <item>22050Hz</item>
+        <item>44100Hz （推奨）</item>
     </string-array>
     <string-array name="mp3_encode_quality_entries">
         <!-- <item>最高</item> -->
