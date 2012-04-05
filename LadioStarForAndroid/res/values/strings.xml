@@ -93,7 +93,9 @@
     <string name="default_broadcast_time">00:00:00</string>
     <string name="volume">Volume</string>
     <string name="mute">Mute</string>
-
+    <string name="mic">Mic</string>
+    <string name="_100_percent">100%</string>
+    
     <string name="help_main_url" formatted="false">http://translate.google.co.jp/translate?sl=ja&amp;tl=en&amp;js=n&amp;prev=_t&amp;hl=ja&amp;ie=UTF-8&amp;layout=2&amp;eotf=1&amp;u=http%3A%2F%2Fgarage.uraroji.com%2Fsoftware%2Fladio-star%2F%25E4%25BD%25BF%25E3%2581%2584%25E6%2596%25B9%2F</string>
     <string name="help_setting_url" formatted="false">http://translate.google.co.jp/translate?sl=ja&amp;tl=en&amp;js=n&amp;prev=_t&amp;hl=ja&amp;ie=UTF-8&amp;layout=2&amp;eotf=1&amp;u=http%3A%2F%2Fgarage.uraroji.com%2Fsoftware%2Fladio-star%2F%25E4%25BD%25BF%25E3%2581%2584%25E6%2596%25B9%2F%25E8%25A8%25AD%25E5%25AE%259A%25E3%2581%25AB%25E3%2581%25A4%25E3%2581%2584%25E3%2581%25A6%2F</string>
 

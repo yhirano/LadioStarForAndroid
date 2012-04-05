@@ -12,17 +12,11 @@
         android:background="@color/main_bottom_background"
         android:padding="3dp" >
 
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" >
-
             <Button
                 android:id="@+id/StartStopButton"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/start" />
-        </LinearLayout>
     </FrameLayout>
 
     <LinearLayout
@@ -64,12 +58,27 @@
                     android:gravity="center_horizontal"
                     android:textAppearance="@android:style/TextAppearance.Large" />
 
-                <ProgressBar
-                    android:id="@+id/LoudnessProgressBar"
+                <LinearLayout
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:indeterminate="false"
-                    style="?android:attr/progressBarStyleHorizontal" />
+                    android:orientation="horizontal" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginRight="10dp"
+                        android:text="@string/mic" />
+
+                    <ProgressBar
+                        android:id="@+id/LoudnessProgressBar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:layout_marginTop="6dp"
+                        android:indeterminate="false" />
+                </LinearLayout>
 
                 <TableLayout
                     android:layout_width="fill_parent"
@@ -205,6 +214,7 @@
                     <LinearLayout
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
                         android:layout_weight="1"
                         android:orientation="vertical" >
 
@@ -224,7 +234,7 @@
                                 android:id="@+id/VolumeRateTextView"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="100%" />
+                                android:text="@string/_100_percent" />
                         </LinearLayout>
 
                         <SeekBar
@@ -239,7 +249,7 @@
                         android:id="@+id/MuteButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_gravity="bottom"
+                        android:layout_gravity="center_vertical"
                         android:text="@string/mute" />
                 </LinearLayout>
             </LinearLayout>
