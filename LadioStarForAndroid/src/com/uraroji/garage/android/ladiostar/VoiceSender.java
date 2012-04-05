@@ -431,6 +431,11 @@ public class VoiceSender {
          */
         public RecThread(BroadcastConfig broadcastConfig) {
             mBroadcastConfig = broadcastConfig;
+            mLoudnessTotalLengthLimit = (mBroadcastConfig.getAudioSampleRate()
+                    * mBroadcastConfig.getAudioChannel()) / C.LOUDNESS_NOTIFY_TIMES_PER_SEC;
+
+            android.os.Process
+                    .setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
         }
 
         @Override
@@ -438,33 +443,25 @@ public class VoiceSender {
             Log.d(C.TAG, "Start Record thread.");
 
             try {
-                android.os.Process
-                        .setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+                final int recBufferSize = getRecBufferSize();
 
-                final int channelConfig = getAudioChannelConfig(mBroadcastConfig
-                        .getAudioChannel());
-
-                // 録音に最低限必要なバッファサイズ
-                final int recBufferSize = AudioRecord.getMinBufferSize(
-                        mBroadcastConfig.getAudioSampleRate(), channelConfig,
-                        AudioFormat.ENCODING_PCM_16BIT);
                 // バッファサイズが取得できない。サンプリングレート等の設定を端末がサポートしていない可能性がある。
                 if (recBufferSize < 0) {
                     mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
                     notifyRecStateChangedHandle(MSG_ERROR_NOT_SUPPORTED_RECORDING_PARAMETERS); // エラー名を変える
                     return;
                 }
-                /*
+
+               /*
                  * 録音に最低限必要なバッファサイズよりも、エンコード待ちバッファサイズの方が小さい場合は否応なしに中止にする。
                  * PCMバッファサイズを大きくすること。
                  */
                 assert (recBufferSize > mPcmBuffer.capacity());
-                Log.d(C.TAG,
-                        "Recording buffersize is "
-                                + String.valueOf(recBufferSize) + " bytes.");
+                Log.d(C.TAG, "Recording buffersize is " + String.valueOf(recBufferSize) + " bytes.");
                 AudioRecord audioRecord = new AudioRecord(
                         MediaRecorder.AudioSource.MIC,
-                        mBroadcastConfig.getAudioSampleRate(), channelConfig,
+                        mBroadcastConfig.getAudioSampleRate(),
+                        getAudioChannelConfig(mBroadcastConfig.getAudioChannel()),
                         AudioFormat.ENCODING_PCM_16BIT, recBufferSize);
                 short[] recBuffer = new short[recBufferSize];
 
@@ -472,9 +469,7 @@ public class VoiceSender {
                     try {
                         audioRecord.startRecording(); // 録音を開始する
                     } catch (IllegalStateException e) {
-                        Log.w(C.TAG,
-                                "IllegalStateException occurred when audio record start.",
-                                e);
+                        Log.w(C.TAG, "IllegalStateException occurred when audio record start.", e);
                         mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
                         // 録音の開始に失敗した
                         notifyRecStateChangedHandle(MSG_ERROR_REC_START);
@@ -486,60 +481,21 @@ public class VoiceSender {
                     // 録音が開始した
                     notifyRecStateChangedHandle(MSG_REC_STARTED);
 
-                    int readSize = 0;
-                    while (mBroadcastState.isConnectingOrBroadcasting()) {
-                        readSize = audioRecord
-                                .read(recBuffer, 0, recBufferSize);
-                        if (readSize < 0) {
+                    try {
+                        int result = copyFormAudioRecordToRecBuffer(audioRecord, recBuffer);
+                        if (result < 0) {
                             mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
                             // 録音ができない
                             notifyRecStateChangedHandle(MSG_ERROR_AUDIO_RECORD);
                             return;
                         }
-                        // データが読み込めなかった場合は何もしない
-                        else if (readSize == 0) {
-                            ;
-                        }
-                        // データが入っている場合
-                        else {
-                            try {
-                                int availableDataSize = 0;
-                                synchronized (mPcmBufferLock) {
-                                    // 音声のボリュームを調整する
-                                    changeVolume(recBuffer, readSize);
-
-                                    notifyLundness(recBuffer, readSize);
-                                    
-                                    try {
-                                        // バッファに書き込む
-                                        mPcmBuffer.put(recBuffer, 0, readSize);
-                                        availableDataSize = mPcmBuffer
-                                                .getAvailable();
-                                    } finally {
-                                        mPcmBufferLock.notifyAll();
-                                        if (C.LOCAL_LOG) {
-                                            Log.v(C.TAG,
-                                                    "Notify to write PCM buffer.");
-                                        }
-                                    }
-                                }
-                                if (C.LOCAL_LOG) {
-                                    Log.v(C.TAG,
-                                            "Wrote PCM buffer("
-                                                    + String.valueOf(readSize)
-                                                    + " bytes). Available buffersize is "
-                                                    + String.valueOf(availableDataSize)
-                                                    + " bytes.");
-                                }
-                            } catch (BufferOverflowException e) {
-                                Log.w(C.TAG,
-                                        "MP3 encoding is slow, it seems to have PCM buffer overflowed.");
-                                mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
-                                // 録音に対してエンコードが遅いなどの理由でバッファオーバーフローした
-                                notifyRecStateChangedHandle(MSG_ERROR_PCM_BUFFER_OVERFLOW);
-                                return;
-                            }
-                        }
+                    } catch (BufferOverflowException e) {
+                        Log.w(C.TAG,
+                                "MP3 encoding is slow, it seems to have PCM buffer overflowed.");
+                        mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
+                        // 録音に対してエンコードが遅いなどの理由でバッファオーバーフローした
+                        notifyRecStateChangedHandle(MSG_ERROR_PCM_BUFFER_OVERFLOW);
+                        return;
                     }
                 } finally {
                     audioRecord.stop(); // 録音を停止する
@@ -569,6 +525,84 @@ public class VoiceSender {
         }
 
         /**
+         * 録音バッファのサイズを取得する
+         * 
+         * @return 録音バッファのサイズ。0未満の場合はOSからバッファサイズが取得できない。
+         */
+        private int getRecBufferSize() {
+            // 録音に最低限必要なバッファサイズ
+            final int recBufferSizeMin = AudioRecord.getMinBufferSize(
+                    mBroadcastConfig.getAudioSampleRate(),
+                    getAudioChannelConfig(mBroadcastConfig.getAudioChannel()),
+                    AudioFormat.ENCODING_PCM_16BIT);
+            // バッファサイズが取得できない。サンプリングレート等の設定を端末がサポートしていない可能性がある。
+            if (recBufferSizeMin < 0) {
+                return recBufferSizeMin;
+            }
+
+            // 録音バッファサイズ。指定の秒数分だけ確保する。
+            final int recBufferSize = (int) (mBroadcastConfig.getAudioSampleRate()
+                    * mBroadcastConfig.getAudioChannel() * 2
+                    * (C.REC_BUFFER_MSEC / 1000f));
+
+            return Math.max(recBufferSizeMin, recBufferSize);
+        }
+        
+        /**
+         * AudioRecordからデータを読み込みRecBufferに書き込む
+         * 
+         * @param audioRecord AudioRecord
+         * @param recBuffer RecBuffer
+         * @return 0:成功 -1:録音ができない
+         */
+        private int copyFormAudioRecordToRecBuffer(AudioRecord audioRecord, short[] recBuffer) {
+            int readSize = 0;
+            int availableDataSize = 0;
+
+            try {
+                while (mBroadcastState.isConnectingOrBroadcasting()) {
+                    readSize = audioRecord.read(recBuffer, 0, recBuffer.length);
+                    if (readSize < 0) {
+                        return -1;
+                    }
+                    // データが読み込めなかった場合は何もしない
+                    else if (readSize == 0) {
+                        ;
+                    }
+                    // データが入っている場合
+                    else {
+                        // 音声のボリュームを調整する
+                        changeVolume(recBuffer, readSize);
+
+                        notifyLoudness(recBuffer, readSize);
+
+                        synchronized (mPcmBufferLock) {
+                            // バッファに書き込む
+                            mPcmBuffer.put(recBuffer, 0, readSize);
+                            availableDataSize = mPcmBuffer.getAvailable();
+                            mPcmBufferLock.notifyAll();
+                            if (C.LOCAL_LOG) {
+                                Log.v(C.TAG, "Notify to write PCM buffer.");
+                            }
+                        }
+                        if (C.LOCAL_LOG) {
+                            Log.v(C.TAG,
+                                    "Wrote PCM buffer(" + String.valueOf(readSize)
+                                            + " bytes). Available buffersize is "
+                                            + String.valueOf(availableDataSize) + " bytes.");
+                        }
+                    }
+                }
+            } finally {
+                synchronized (mPcmBufferLock) {
+                    mPcmBufferLock.notifyAll();
+                }
+            }
+            
+            return 0;
+        }
+
+        /**
          * ボリュームを調整する
          * 
          * @param buf ボリュームを調整するPCMバッファ。ここで指定したPCMバッファを直接書き換える。
@@ -594,6 +628,11 @@ public class VoiceSender {
         }
 
         /**
+         * 音の大きさを通知通知するまでに計測するバッファの長さ
+         */
+        private final int mLoudnessTotalLengthLimit;
+        
+        /**
          * 録音した音の大きさの総和の2乗を格納しておくための領域
          */
         private double mLoudnessSquareTotal = 0;
@@ -609,22 +648,18 @@ public class VoiceSender {
          * @param buf PCMバッファ。
          * @param size バッファの長さ
          */
-        private void notifyLundness(short[] buf, int size) {
+        private void notifyLoudness(short[] buf, int size) {
             final ArrayList<Handler> handerList = getLoudnessHandlerListClone();
             if (handerList.isEmpty()) {
                 return;
             }
-
-            // 音の大きさを通知通知するまでに計測するバッファの長さ
-            final int limit = (mBroadcastConfig.getAudioSampleRate()
-                    * mBroadcastConfig.getAudioChannel()) / C.LOUDNESS_NOTIFY_TIMES_PER_SEC;
 
             for (int i = 0; i < size; ++i) {
                 mLoudnessSquareTotal += buf[i] * buf[i];
                 ++mLoudnessTotalLength;
 
                 // 一定量の録音バッファのRMSが計算し終わったら、音の大きさを送信する
-                if (mLoudnessTotalLength >= limit) {
+                if (mLoudnessTotalLength >= mLoudnessTotalLengthLimit) {
                     final double rmsdB = 20.0 * Math.log10(Math.sqrt(mLoudnessSquareTotal / mLoudnessTotalLength));
 
                     if (C.LOCAL_LOG) {
@@ -681,8 +716,10 @@ public class VoiceSender {
             try {
                 Lame.log(C.LOCAL_LOG);
                 // Lame init
-                encoder = new Lame.Builder(mBroadcastConfig.getAudioSampleRate(),
-                        mBroadcastConfig.getAudioChannel(), mBroadcastConfig.getAudioSampleRate(),
+                encoder = new Lame.Builder(
+                        mBroadcastConfig.getAudioSampleRate(),
+                        mBroadcastConfig.getAudioChannel(),
+                        mBroadcastConfig.getAudioSampleRate(),
                         mBroadcastConfig.getAudioBrate())
                         .quality(mBroadcastConfig.getAudioMp3EncodeQuality())
                         .id3tagTitle(mBroadcastConfig.getChannelTitle())
@@ -691,207 +728,225 @@ public class VoiceSender {
                         .id3tagComment(mBroadcastConfig.getChannelDescription()).create();
                 Log.d(C.TAG,
                         "SimpleLame is initialized. (SampleRate="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioSampleRate())
-                                + ", Channel="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioChannel())
-                                + ", BitRate="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioBrate())
+                                + String.valueOf(mBroadcastConfig.getAudioSampleRate())
+                                + ", Channel=" + String.valueOf(mBroadcastConfig.getAudioChannel())
+                                + ", BitRate=" + String.valueOf(mBroadcastConfig.getAudioBrate())
                                 + ", Quality="
-                                + String.valueOf(mBroadcastConfig
-                                        .getAudioMp3EncodeQuality()) + ")");
-
-                // 読み込みバッファサイズ。指定の秒数分だけ確保する。
-                final int readBufferSize = (mBroadcastConfig
-                        .getAudioSampleRate()
-                        * mBroadcastConfig.getAudioChannel() * 2 * C.ENCODE_PCM_BUFFER_SEC) + 2;
-                // 読み込みバッファ
-                short[] readBuffer = new short[readBufferSize];
-                Log.d(C.TAG,
-                        "Read buffersize is " + String.valueOf(readBufferSize)
-                                + " bytes.");
-
-                // MP3バッファサイズ
-                final int mp3BufferSize = (int) (7200 + (readBufferSize * 1.25));
-                // MP3バッファ
-                byte[] mp3buffer = new byte[mp3BufferSize];
-                Log.d(C.TAG,
-                        "Temporary MP3 encode buffersize is "
-                                + String.valueOf(mp3BufferSize) + " bytes.");
-
-                // 読み込みサイズ
-                int readSize = 0;
-                // エンコード後のバイトサイズ
-                int encResult = 0;
+                                + String.valueOf(mBroadcastConfig.getAudioMp3EncodeQuality()) + ")");
 
                 // エンコードが開始した
                 notifyRecStateChangedHandle(MSG_ENCODE_STARTED);
 
-                while (mBroadcastState.isConnectingOrBroadcasting()) {
-                    readSize = 0;
-                    while (mBroadcastState.isConnectingOrBroadcasting()) {
-                        synchronized (mPcmBufferLock) {
-                            final int availableSize = mPcmBuffer.getAvailable();
-                            if (availableSize != 0) {
-                                readSize = Math.min(availableSize,
-                                        readBufferSize);
-                                readSize = mPcmBuffer.get(readBuffer, 0,
-                                        readSize);
-                            } else {
-                                try {
-                                    if (C.LOCAL_LOG) {
-                                        Log.v(C.TAG,
-                                                "Wait to read PCM buffer.");
-                                    }
-
-                                    mPcmBufferLock.wait();
-                                } catch (InterruptedException e) {
-                                    Log.w(C.TAG,
-                                            "Interrupted wait to writing PCM bufffer.",
-                                            e);
-                                    mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
-                                    // エンコードに失敗した
-                                    notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-                                    return;
-                                }
-                            }
-                        }
-                        if (readSize != 0) {
-                            if (C.LOCAL_LOG) {
-                                Log.v(C.TAG,
-                                        "Read PCM buffer("
-                                                + String.valueOf(readSize)
-                                                + " bytes).");
-                            }
-                            break;
-                        }
-                    }
-
-                    encResult = 0;
-                    if (readSize != 0) {
-                        switch (mBroadcastConfig.getAudioChannel()) {
-                            case 1: // モノラルの場合
-                                encResult = encoder.encode(readBuffer,
-                                        readBuffer, readSize, mp3buffer);
-                                break;
-                            case 2: // ステレオの場合
-                                encResult = encoder.encodeBufferInterleaved(
-                                        readBuffer, readSize / 2, mp3buffer);
-                                break;
-                            default: // ここに到達することはあり得ないはずだが一応エラーとする。
-                                Log.w(C.TAG,
-                                        "Failed LAME encode. PCM channels unknown.");
-                                mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
-                                // エンコードに失敗した
-                                notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-                                return;
-                        }
-                        if (encResult < 0) {
-                            Log.w(C.TAG, "Failed LAME encode(error="
-                                    + encResult + ").");
-                            mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
-                            // エンコードに失敗した
-                            notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
-                            return;
-                        }
-                    }
-                    if (encResult != 0) {
-                        if (C.LOCAL_LOG) {
-                            Log.v(C.TAG,
-                                    "Encoded " + String.valueOf(readSize)
-                                            + " bytes PCM to "
-                                            + String.valueOf(encResult)
-                                            + " bytes MP3.");
-                        }
-                        try {
-                            int availableDataSize = 0;
-                            synchronized (mMp3BufferLock) {
-                                try {
-                                    // バッファに書き込む
-                                    mMp3Buffer.put(mp3buffer, 0, encResult,
-                                            true);
-                                    availableDataSize = mMp3Buffer
-                                            .getAvailable();
-                                } finally {
-                                    mMp3BufferLock.notifyAll();
-                                    if (C.LOCAL_LOG) {
-                                        Log.v(C.TAG,
-                                                "Notify to write MP3 buffer.");
-                                    }
-                                }
-                            }
-                            if (C.LOCAL_LOG) {
-                                Log.v(C.TAG,
-                                        "Wrote MP3 buffer("
-                                                + String.valueOf(encResult)
-                                                + " bytes). Available buffersize is "
-                                                + String.valueOf(availableDataSize)
-                                                + " bytes.");
-                            }
-                        } catch (BufferOverflowException e) {
-                            Log.w(C.TAG, "MP3 buffer overflowed.");
-                            mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
-                            // エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
-                            notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
-                            return;
-                        }
-                    }
-                }
-
-                int flushResult = encoder.flush(mp3buffer);
-                if (flushResult < 0) {
-                    Log.w(C.TAG, "Failed LAME flush(error=" + flushResult
-                            + ").");
+                int encResult = encode(encoder);
+                if (encResult < 0) {
                     mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
                     // エンコードに失敗した
                     notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
                     return;
                 }
-                if (flushResult != 0) {
-                    if (C.LOCAL_LOG) {
-                        Log.v(C.TAG,
-                                "Encoded remain PCM to "
-                                        + String.valueOf(flushResult)
-                                        + " bytes MP3.");
-                    }
-                    try {
-                        int availableDataSize = 0;
-                        synchronized (mMp3BufferLock) {
-                            try {
-                                // バッファに書き込む
-                                mMp3Buffer.put(mp3buffer, 0, flushResult, true);
-                                availableDataSize = mMp3Buffer.getAvailable();
-                            } finally {
-                                mMp3BufferLock.notifyAll();
-                                if (C.LOCAL_LOG) {
-                                    Log.v(C.TAG, "Notify to write MP3 buffer.");
-                                }
-                            }
-                        }
-                        if (C.LOCAL_LOG) {
-                            Log.v(C.TAG,
-                                    "Wrote MP3 buffer("
-                                            + String.valueOf(flushResult)
-                                            + " bytes). Available buffersize is "
-                                            + String.valueOf(availableDataSize)
-                                            + " bytes.");
-                        }
-                    } catch (BufferOverflowException e) {
-                        Log.w(C.TAG, "MP3 buffer overflowed.");
-                        mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
-                        // エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
-                        notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
-                        return;
-                    }
+
+                encResult = flush(encoder);
+                if (encResult < 0) {
+                    mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
+                    // エンコードに失敗した
+                    notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
+                    return;
                 }
+            } catch (InterruptedException e) {
+                Log.w(C.TAG, "Interrupted wait to writing PCM bufffer.", e);
+                mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
+                // エンコードに失敗した
+                notifyRecStateChangedHandle(MSG_ERROR_AUDIO_ENCODE);
+            } catch (BufferOverflowException e) {
+                Log.w(C.TAG, "MP3 buffer overflowed.");
+                mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
+                // エンコードに対して送信が遅いなどの理由でバッファオーバーフローした
+                notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
+                return;
             } finally {
                 encoder.close();
                 Log.d(C.TAG, "SimpleLame is closed.");
-
+                synchronized (mMp3BufferLock) {
+                    mMp3BufferLock.notifyAll();
+                }
                 Log.d(C.TAG, "Finish Encode thread.");
             }
+        }
+
+        /**
+         * PCMバッファ{@link #mPcmBuffer}からデータを読み込み、エンコードしてMP3バッファ{@link #mMp3Buffer}に書き込む。<br />
+         * <br />
+         * 配信が終了するか、エラーが発生するまでループする。
+         * 
+         * @param encoder エンコーダ
+         * @return 0:成功 -1:エンコード失敗
+         * @throws InterruptedException
+         */
+        private int encode(Lame encoder)
+                throws InterruptedException {
+            final int readBufferSize = getReadPcmBufferSize();
+            // 読み込みバッファ
+            short[] readBuffer = new short[readBufferSize];
+            Log.d(C.TAG, "Read buffersize is " + String.valueOf(readBufferSize) + " bytes.");
+
+            // MP3バッファサイズ
+            final int mp3BufferSize = getMp3BufferSize(readBufferSize);
+            // MP3バッファ
+            byte[] mp3buffer = new byte[mp3BufferSize];
+            Log.d(C.TAG, "Temporary MP3 encode buffersize is " + String.valueOf(mp3BufferSize)
+                    + " bytes.");
+
+            // 読み込みサイズ
+            int readSize = 0;
+            // エンコード後のバイトサイズ
+            int encResult = 0;
+            while (mBroadcastState.isConnectingOrBroadcasting()) {
+                readSize = copyFromPcmBufferToBuffer(readBuffer);
+
+                encResult = 0;
+                if (readSize != 0) {
+                    switch (mBroadcastConfig.getAudioChannel()) {
+                        case 1: // モノラルの場合
+                            encResult = encoder.encode(readBuffer, readBuffer, readSize, mp3buffer);
+                            break;
+                        case 2: // ステレオの場合
+                            encResult = encoder.encodeBufferInterleaved(readBuffer, readSize / 2,
+                                    mp3buffer);
+                            break;
+                        default: // ここに到達することはあり得ないはずだが一応エラーとする。
+                            Log.w(C.TAG, "Failed LAME encode. PCM channels unknown.");
+                            return -1;
+                    }
+                    if (encResult < 0) {
+                        Log.w(C.TAG, "Failed LAME encode(error=" + encResult + ").");
+                        return -1;
+                    }
+                }
+                if (encResult != 0) {
+                    if (C.LOCAL_LOG) {
+                        Log.v(C.TAG, "Encoded " + String.valueOf(readSize) + " bytes PCM to "
+                                + String.valueOf(encResult) + " bytes MP3.");
+                    }
+
+                    int availableDataSize = 0;
+                    synchronized (mMp3BufferLock) {
+                        // バッファに書き込む
+                        mMp3Buffer.put(mp3buffer, 0, encResult, true);
+                        availableDataSize = mMp3Buffer.getAvailable();
+                        mMp3BufferLock.notifyAll();
+                        if (C.LOCAL_LOG) {
+                            Log.v(C.TAG, "Notify to write MP3 buffer.");
+                        }
+                    }
+                    if (C.LOCAL_LOG) {
+                        Log.v(C.TAG,
+                                "Wrote MP3 buffer(" + String.valueOf(encResult)
+                                        + " bytes). Available buffersize is "
+                                        + String.valueOf(availableDataSize) + " bytes.");
+                    }
+                }
+            }
+            
+            return 0;
+        }
+
+        /**
+         * PCMバッファからデータをコピーするためのバッファのサイズを取得する
+         * 
+         * @return PCMバッファからデータをコピーするためのバッファのサイズ
+         */
+        private int getReadPcmBufferSize() {
+            // 読み込みバッファサイズ。指定の秒数分だけ確保する。
+            return (mBroadcastConfig.getAudioSampleRate()
+                    * mBroadcastConfig.getAudioChannel() * 2 * C.ENCODE_PCM_BUFFER_SEC);
+        }
+
+        /**
+         * 適切なMP3バッファサイズを取得する
+         * 
+         * @param readPcmBufferSize PCMバッファからデータをコピーするためのバッファのサイズ
+         * @return MP3バッファサイズ
+         */
+        private int getMp3BufferSize(int readPcmBufferSize){
+            return (int) (7200 + (readPcmBufferSize * 1.25));
+        }
+        /**
+         * PCMバッファ{@link #mPcmBuffer}から指定のバッファにデータをコピーする
+         * 
+         * @param buffer コピー先のバッファ
+         * @return コピーしたデータのサイズ
+         * @throws InterruptedException 
+         */
+        private int copyFromPcmBufferToBuffer(short[] buffer) throws InterruptedException {
+            int copySize = 0;
+            while (mBroadcastState.isConnectingOrBroadcasting()) {
+                synchronized (mPcmBufferLock) {
+                    final int availableSize = mPcmBuffer.getAvailable();
+                    if (availableSize != 0) {
+                        copySize = Math.min(availableSize, buffer.length);
+                        copySize = mPcmBuffer.get(buffer, 0, copySize);
+                    } else {
+                        if (C.LOCAL_LOG) {
+                            Log.v(C.TAG, "Wait to read PCM buffer.");
+                        }
+
+                        mPcmBufferLock.wait();
+                    }
+                }
+                if (copySize != 0) {
+                    if (C.LOCAL_LOG) {
+                        Log.v(C.TAG, "Read PCM buffer(" + String.valueOf(copySize) + " bytes).");
+                    }
+                    break;
+                }
+            }
+
+            return copySize;
+        }
+
+        /**
+         * エンコーダに残っているデータをフラッシュして、MP3バッファ{@link #mMp3Buffer}に書き込む。
+         * 
+         * @param encoder エンコーダ
+         * @return 0:成功 -1:エンコード失敗
+         */
+        private int flush(Lame encoder) {
+            // MP3バッファサイズ
+            final int mp3BufferSize = getMp3BufferSize(getReadPcmBufferSize());
+            // MP3バッファ
+            byte[] mp3buffer = new byte[mp3BufferSize];
+            Log.d(C.TAG, "Temporary MP3 encode buffersize is " + String.valueOf(mp3BufferSize)
+                    + " bytes.");
+
+            int flushResult = encoder.flush(mp3buffer);
+            if (flushResult < 0) {
+                Log.w(C.TAG, "Failed LAME flush(error=" + flushResult + ").");
+                return -1;
+            }
+            if (flushResult != 0) {
+                if (C.LOCAL_LOG) {
+                    Log.v(C.TAG, "Encoded remain PCM to " + String.valueOf(flushResult)
+                            + " bytes MP3.");
+                }
+                int availableDataSize = 0;
+                synchronized (mMp3BufferLock) {
+                    // バッファに書き込む
+                    mMp3Buffer.put(mp3buffer, 0, flushResult, true);
+                    availableDataSize = mMp3Buffer.getAvailable();
+                    mMp3BufferLock.notifyAll();
+                    if (C.LOCAL_LOG) {
+                        Log.v(C.TAG, "Notify to write MP3 buffer.");
+                    }
+                }
+                if (C.LOCAL_LOG) {
+                    Log.v(C.TAG,
+                            "Wrote MP3 buffer(" + String.valueOf(flushResult)
+                                    + " bytes). Available buffersize is "
+                                    + String.valueOf(availableDataSize) + " bytes.");
+                }
+            }
+            
+            return 0;
         }
     }
 
@@ -930,8 +985,7 @@ public class VoiceSender {
                         serversInfo.fetchServerInfo();
                     } catch (IOException e) {
                         Log.w(C.TAG,
-                                "IOException occurred when fetch netladio server information.",
-                                e);
+                                "IOException occurred when fetch netladio server information.", e);
                         if (mIsRecoonect) {
                             try {
                                 reconnect(mBroadcastConfig);
@@ -985,9 +1039,7 @@ public class VoiceSender {
                     sockIn = socket.getInputStream();
                     sockOut = socket.getOutputStream();
                 } catch (UnknownHostException e) {
-                    Log.w(C.TAG,
-                            "UnknownHostException occurred when create socket.",
-                            e);
+                    Log.w(C.TAG, "UnknownHostException occurred when create socket.", e);
                     if (mIsRecoonect) {
                         try {
                             reconnect(mBroadcastConfig);
@@ -1001,8 +1053,7 @@ public class VoiceSender {
                     }
                     return;
                 } catch (IOException e) {
-                    Log.w(C.TAG,
-                            "IOException occurred when create socket.", e);
+                    Log.w(C.TAG, "IOException occurred when create socket.", e);
                     if (mIsRecoonect) {
                         try {
                             reconnect(mBroadcastConfig);
@@ -1049,15 +1100,12 @@ public class VoiceSender {
                 try {
                     // ヘッダ送信
                     try {
-                        pr = new PrintWriter(new OutputStreamWriter(
-                                sockOut, "Shift_JIS"), true);
+                        pr = new PrintWriter(new OutputStreamWriter(sockOut, "Shift_JIS"), true);
                         String headerStr = createHeader();
                         pr.println(headerStr);
                         pr.flush();
                     } catch (UnsupportedEncodingException e) {
-                        Log.w(C.TAG,
-                                "UnsupportedEncodingException occurred when send header.",
-                                e);
+                        Log.w(C.TAG, "UnsupportedEncodingException occurred when send header.", e);
                         if (mIsRecoonect) {
                             try {
                                 reconnect(mBroadcastConfig);
@@ -1080,56 +1128,44 @@ public class VoiceSender {
                         String responseStr = br.readLine();
                         // 接続に成功
                         if (responseStr.equals("HTTP/1.0 200 OK")) {
-                            Log.i(C.TAG, "Connected to "
-                                    + socket.getInetAddress()
-                                            .getHostAddress() + ":"
-                                    + socket.getPort() + ".");
+                            Log.i(C.TAG, "Connected to " + socket.getInetAddress().getHostAddress()
+                                    + ":" + socket.getPort() + ".");
                         }
                         // 認証失敗
-                        else if (responseStr
-                                .equals("HTTP/1.0 401 Authentication Required")) {
-                            Log.w(C.TAG, "Received error.(" + responseStr
-                                    + ")");
+                        else if (responseStr.equals("HTTP/1.0 401 Authentication Required")) {
+                            Log.w(C.TAG, "Received error.(" + responseStr + ")");
                             mBroadcastState.set(BROADCAST_STATE_STOPPING);; // 動作中フラグを下げる
                             // 認証失敗
                             notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_AUTHENTICATION_REQUIRED);
                             return;
                         }
                         // 同名のマウントが使用中
-                        else if (responseStr
-                                .equals("HTTP/1.0 403 Mountpoint in use")) {
-                            Log.w(C.TAG, "Received error.(" + responseStr
-                                    + ")");
+                        else if (responseStr.equals("HTTP/1.0 403 Mountpoint in use")) {
+                            Log.w(C.TAG, "Received error.(" + responseStr + ")");
                             mBroadcastState.set(BROADCAST_STATE_STOPPING);; // 動作中フラグを下げる
                             // 同名のマウントが使用中
                             notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_IN_USE);
                             return;
                         }
                         // マウント名前が長すぎるか短すぎる
-                        else if (responseStr
-                                .equals("HTTP/1.0 403 Mountpoint too long")) {
-                            Log.w(C.TAG, "Received error.(" + responseStr
-                                    + ")");
+                        else if (responseStr.equals("HTTP/1.0 403 Mountpoint too long")) {
+                            Log.w(C.TAG, "Received error.(" + responseStr + ")");
                             mBroadcastState.set(BROADCAST_STATE_STOPPING);; // 動作中フラグを下げる
                             // ヘッダのレスポンス受信に失敗した
                             notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_MOUNTPOINT_TOO_LONG);
                             return;
                         }
                         // サポート外のストリーム
-                        else if (responseStr
-                                .equals("HTTP/1.0 403 Content-type not supported")) {
-                            Log.w(C.TAG, "Received error.(" + responseStr
-                                    + ")");
+                        else if (responseStr.equals("HTTP/1.0 403 Content-type not supported")) {
+                            Log.w(C.TAG, "Received error.(" + responseStr + ")");
                             mBroadcastState.set(BROADCAST_STATE_STOPPING);; // 動作中フラグを下げる
                             // ヘッダのレスポンス受信に失敗した
                             notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_CONTENT_TYPE_NOT_SUPPORTED);
                             return;
                         }
                         // 混んでいて接続できない
-                        else if (responseStr
-                                .equals("HTTP/1.0 403 too many sources connected")) {
-                            Log.w(C.TAG, "Received error.(" + responseStr
-                                    + ")");
+                        else if (responseStr.equals("HTTP/1.0 403 too many sources connected")) {
+                            Log.w(C.TAG, "Received error.(" + responseStr + ")");
                             mBroadcastState.set(BROADCAST_STATE_STOPPING);; // 動作中フラグを下げる
                             // ヘッダのレスポンス受信に失敗した
                             notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_TOO_MANY_SOURCES_CONNECTED);
@@ -1137,17 +1173,14 @@ public class VoiceSender {
                         }
                         // 未知のレスポンスを受信した
                         else {
-                            Log.w(C.TAG, "Received unknown error.("
-                                    + responseStr + ")");
+                            Log.w(C.TAG, "Received unknown error.(" + responseStr + ")");
                             mBroadcastState.set(BROADCAST_STATE_STOPPING);; // 動作中フラグを下げる
                             // 未知のレスポンスを受信した
                             notifyRecStateChangedHandle(MSG_ERROR_RECEIVED_RESPONSE_UNKNOWN_ERROR);
                             return;
                         }
                     } catch (IOException e) {
-                        Log.w(C.TAG,
-                                "IOException occurred when header response receved.",
-                                e);
+                        Log.w(C.TAG, "IOException occurred when header response receved.", e);
                         if (mIsRecoonect) {
                             try {
                                 reconnect(mBroadcastConfig);
@@ -1165,10 +1198,9 @@ public class VoiceSender {
                     }
 
                     synchronized (mBroadcastingInfoLock) {
-                        mBroadcastingInfo = new BroadcastInfo(
-                                mBroadcastConfig, broadcastServer
-                                        .getServerName().getName(),
-                                broadcastServer.getServerName().getPort(), mStartTime);
+                        mBroadcastingInfo = new BroadcastInfo(mBroadcastConfig, broadcastServer
+                                .getServerName().getName(), broadcastServer.getServerName()
+                                .getPort(), mStartTime);
                     }
 
                     // ここに到達するまでにユーザーにより停止が指示されている場合は終了
@@ -1200,15 +1232,12 @@ public class VoiceSender {
                             } else {
                                 try {
                                     if (C.LOCAL_LOG) {
-                                        Log.v(C.TAG,
-                                                "Wait to read MP3 buffer.");
+                                        Log.v(C.TAG, "Wait to read MP3 buffer.");
                                     }
 
                                     mMp3BufferLock.wait();
                                 } catch (InterruptedException e) {
-                                    Log.w(C.TAG,
-                                            "Interrupted wait to writing MP3 bufffer.",
-                                            e);
+                                    Log.w(C.TAG, "Interrupted wait to writing MP3 bufffer.", e);
                                     if (mIsRecoonect) {
                                         try {
                                             reconnect(mBroadcastConfig);
@@ -1230,15 +1259,12 @@ public class VoiceSender {
                             if (readSize != 0) {
                                 sockOut.write(readBuffer, 0, readSize);
                                 if (C.LOCAL_LOG) {
-                                    Log.v(C.TAG,
-                                            "Sent " + String.valueOf(readSize)
-                                                    + " bytes data.");
+                                    Log.v(C.TAG, "Sent " + String.valueOf(readSize)
+                                            + " bytes data.");
                                 }
                             }
                         } catch (IOException e) {
-                            Log.w(C.TAG,
-                                    "IOException occurred when send stream.",
-                                    e);
+                            Log.w(C.TAG, "IOException occurred when send stream.", e);
                             if (mIsRecoonect) {
                                 try {
                                     reconnect(mBroadcastConfig);
@@ -1267,9 +1293,7 @@ public class VoiceSender {
                         try {
                             br.close();
                         } catch (IOException e) {
-                            Log.w(C.TAG,
-                                    "IOException occurred when BufferedReader close.",
-                                    e);
+                            Log.w(C.TAG, "IOException occurred when BufferedReader close.", e);
                         }
                         br = null;
                     }
@@ -1277,9 +1301,7 @@ public class VoiceSender {
                         try {
                             in.close();
                         } catch (IOException e) {
-                            Log.w(C.TAG,
-                                    "IOException occurred when InputStreamReader close.",
-                                    e);
+                            Log.w(C.TAG, "IOException occurred when InputStreamReader close.", e);
                         }
                         in = null;
                     }
@@ -1291,9 +1313,7 @@ public class VoiceSender {
                         try {
                             sockOut.close();
                         } catch (IOException e) {
-                            Log.w(C.TAG,
-                                    "IOException occurred when close socket output stream.",
-                                    e);
+                            Log.w(C.TAG, "IOException occurred when close socket output stream.", e);
                         }
                         sockOut = null;
                     }
@@ -1301,23 +1321,18 @@ public class VoiceSender {
                         try {
                             sockIn.close();
                         } catch (IOException e) {
-                            Log.w(C.TAG,
-                                    "IOException occurred when close socket input stream.",
-                                    e);
+                            Log.w(C.TAG, "IOException occurred when close socket input stream.", e);
                         }
                         sockIn = null;
                     }
                     if (socket != null) {
                         try {
                             socket.close();
-                            Log.i(C.TAG, "Disconnected to "
-                                    + socket.getInetAddress()
-                                            .getHostAddress() + ":"
-                                    + socket.getPort() + ".");
+                            Log.i(C.TAG,
+                                    "Disconnected to " + socket.getInetAddress().getHostAddress()
+                                            + ":" + socket.getPort() + ".");
                         } catch (IOException e) {
-                            Log.w(C.TAG,
-                                    "IOException occurred when close socket.",
-                                    e);
+                            Log.w(C.TAG, "IOException occurred when close socket.", e);
                         }
                         socket = null;
                     }
@@ -1356,10 +1371,8 @@ public class VoiceSender {
                             - (System.currentTimeMillis() - mRecStartTime);
                     if (waitTime > 10) {
                         if (C.LOCAL_LOG) {
-                            Log.v(C.TAG,
-                                    "Sleep "
-                                            + String.valueOf(((float) waitTime) / 1000)
-                                            + " sec.");
+                            Log.v(C.TAG, "Sleep " + String.valueOf(((float) waitTime) / 1000)
+                                    + " sec.");
                         }
                         try {
                             Thread.sleep(waitTime);
@@ -1378,38 +1391,22 @@ public class VoiceSender {
          * @return 生成したヘッダ
          */
         private String createHeader() {
-            String result = "SOURCE "
-                    + mBroadcastConfig.getChannelMount()
-                    + " ICE/1.0\r\n";
+            String result = "SOURCE " + mBroadcastConfig.getChannelMount() + " ICE/1.0\r\n";
             result += "Content-Type: audio/mpeg\r\n";
             result += sUserAgent + "\r\n";
             result += "Authorization: Basic c291cmNlOmxhZGlv\r\n";
-            result += "ice-name: "
-                    + mBroadcastConfig.getChannelTitle()
-                    + "\r\n";
-            result += "ice-genre: "
-                    + mBroadcastConfig.getChannelGenre()
-                    + "\r\n";
-            result += "ice-description: "
-                    + mBroadcastConfig.getChannelDescription()
-                    + "\r\n";
-            result += "ice-url: "
-                    + mBroadcastConfig.getChannelUrl() + "\r\n";
+            result += "ice-name: " + mBroadcastConfig.getChannelTitle() + "\r\n";
+            result += "ice-genre: " + mBroadcastConfig.getChannelGenre() + "\r\n";
+            result += "ice-description: " + mBroadcastConfig.getChannelDescription() + "\r\n";
+            result += "ice-url: " + mBroadcastConfig.getChannelUrl() + "\r\n";
             result += "ice-bitrate: "
-                    + String.valueOf(mBroadcastConfig
-                            .getAudioBrate()) + "\r\n";
+                    + String.valueOf(mBroadcastConfig.getAudioBrate()) + "\r\n";
             result += "ice-public: 0\r\n";
             result += "ice-audio-info:ice-samplerate="
-                    + String.valueOf(mBroadcastConfig
-                            .getAudioSampleRate())
-                    + ";ice-bitrate="
-                    + String.valueOf(mBroadcastConfig
-                            .getAudioBrate())
-                    + ";ice-channels="
-                    + String.valueOf(mBroadcastConfig
-                            .getAudioChannel()) + "\r\n";
-            result += "x-ladio-info:charset=sjis;dj="
-                    + mBroadcastConfig.getChannelDjName()
+                    + String.valueOf(mBroadcastConfig.getAudioSampleRate()) + ";ice-bitrate="
+                    + String.valueOf(mBroadcastConfig.getAudioBrate()) + ";ice-channels="
+                    + String.valueOf(mBroadcastConfig.getAudioChannel()) + "\r\n";
+            result += "x-ladio-info:charset=sjis;dj=" + mBroadcastConfig.getChannelDjName()
                     + "\r\n";
             result += "\r\n"; // ヘッダの終了は空行
 
@@ -1432,8 +1429,7 @@ public class VoiceSender {
 
             mBroadcastState.set(BROADCAST_STATE_CONNECTING);
 
-            Log.i(C.TAG, "Wait " + String.valueOf(((float) waitTime) / 1000)
-                    + "sec before reconnect.");
+            Log.i(C.TAG, String.format("Wait %.2f sec before reconnect.", (waitTime - System.currentTimeMillis()) / 1000f));
             notifyRecStateChangedHandle(MSG_RECONNECT_STARTED);
             while (waitTime > System.currentTimeMillis()) {
                 if (mBroadcastState.isStoppedOrStopping()) {
