@@ -109,7 +109,8 @@ public class C {
      * エンコーダに渡すデータバッファに最大何秒分のデータを格納するかを指定する。<br />
      * <br />
      * PCMバッファからこのバッファにいったんデータをコピーし、エンコーダにこのバッファのデータを渡す。<br />
-     * 1以上の整数でかつ、 {@link #PCM_BUFFER_SEC} よりも小さい値にすること。
+     * 1以上の整数でかつ、 {@link #PCM_BUFFER_SEC} よりも小さい値にすること。<br />
+     * （{@link #PCM_BUFFER_SEC} よりも大きい値でも問題ないが意味がないため。）
      */
     public static final int ENCODE_PCM_BUFFER_SEC = 2;
 
@@ -118,7 +119,7 @@ public class C {
      * <br />
      * MP3バッファとは、エンコードしたデータをいったんため込んでおくためのバッファである。<br />
      * エンコードしているスレッドと別のスレッドが、このバッファのデータを読み込みデータの送信をする。<br />
-     * 1以上の整数を指定すること。
+     * 1以上の整数でかつ、 {@link #PCM_BUFFER_SEC} と {@link #ENCODE_PCM_BUFFER_SEC} よりも十分大きい値にすること。
      */
     public static final int MP3_BUFFER_SEC = 40;
 
