@@ -87,18 +87,23 @@ public class C {
     public static final int PCM_BUFFER_SEC = 5;
 
     /**
-     * 録音バッファに最大何ミリ秒分のデータをためこむかを指定する。<br />
+     * 録音バッファに最大何秒分のデータをためこむかを指定する。<br />
      * <br />
-     * 録音バッファとは、システムから録音したデータ直接受け取るためのバッファである。<br />
+     * 録音バッファとは、システムから録音したデータをため込むバッファである。<br />
      * 録音バッファのデータをPCMバッファにコピーし、録音しているスレッドと別のスレッドがPCMバッファのデータを読み込みMP3エンコードをする。<br />
      * 1以上の整数でかつ、{@link #PCM_BUFFER_SEC} よりも小さい値にすること。<br />
-     * （{@link #PCM_BUFFER_SEC}は秒指定、{@link #REC_BUFFER_MSEC}はミリ秒指定なので注意）<br />
+     * （{@link #PCM_BUFFER_SEC} よりも大きい値でも問題ないが意味がないため。）
+     */
+    public static final int REC_BUFFER_SEC = 2;
+
+    /**
+     * 録音データ取得バッファに最大何ミリ秒分のデータをためこむかを指定する。<br />
      * <br />
-     * あまり小さい値にすると、録音バッファがオーバーフローする模様。<br />
-     * （"AudioFlinger: RecordThread: buffer overflow"といったログが出る）<br />
+     * 録音データ取得バッファとは、システムから録音したデータ受け取るためのバッファである。<br />
+     * 1以上の整数でかつ、1000 / {@link #LOUDNESS_NOTIFY_TIMES_PER_SEC} よりも小さい値を指定すること。<br />
      * あまり大きい値にすると、マイクの音の大きさメーターが鈍くなるので注意。<br />
      */
-    public static final int REC_BUFFER_MSEC = 100;
+    public static final int READ_REC_BUFFER_MSEC = 50;
 
     /**
      * エンコーダに渡すデータバッファに最大何秒分のデータを格納するかを指定する。<br />

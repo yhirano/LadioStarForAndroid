@@ -391,7 +391,7 @@ public class VoiceSender {
             mPcmBuffer = new ShortRingBuffer(broadcastConfig.getAudioSampleRate()
                     * broadcastConfig.getAudioChannel() * C.PCM_BUFFER_SEC);
         }
-        Log.d(C.TAG, "PCM buffersize is " + String.valueOf(mPcmBuffer.capacity() * 2)
+        Log.d(C.TAG, "PCM buffersize is " + String.valueOf(mPcmBuffer.capacity() / 2)
                 + " bytes.");
 
         /*
@@ -451,18 +451,12 @@ public class VoiceSender {
                     return;
                 }
 
-               /*
-                 * 録音に最低限必要なバッファサイズよりも、エンコード待ちバッファサイズの方が小さい場合は否応なしに中止にする。
-                 * PCMバッファサイズを大きくすること。
-                 */
-                assert (recBufferSize > mPcmBuffer.capacity());
                 Log.d(C.TAG, "Recording buffersize is " + String.valueOf(recBufferSize) + " bytes.");
                 AudioRecord audioRecord = new AudioRecord(
                         MediaRecorder.AudioSource.MIC,
                         mBroadcastConfig.getAudioSampleRate(),
                         getAudioChannelConfig(mBroadcastConfig.getAudioChannel()),
                         AudioFormat.ENCODING_PCM_16BIT, recBufferSize);
-                short[] recBuffer = new short[recBufferSize];
 
                 try {
                     try {
@@ -481,7 +475,7 @@ public class VoiceSender {
                     notifyRecStateChangedHandle(MSG_REC_STARTED);
 
                     try {
-                        int result = copyFormAudioRecordToRecBuffer(audioRecord, recBuffer);
+                        int result = copyFormAudioRecordToRecBuffer(audioRecord);
                         if (result < 0) {
                             mBroadcastState.set(BROADCAST_STATE_STOPPING); // 動作中フラグを下げる
                             // 録音ができない
@@ -541,43 +535,47 @@ public class VoiceSender {
 
             // 録音バッファサイズ。指定の秒数分だけ確保する。
             final int recBufferSize = (int) (mBroadcastConfig.getAudioSampleRate()
-                    * mBroadcastConfig.getAudioChannel() * 2
-                    * (C.REC_BUFFER_MSEC / 1000f));
+                    * mBroadcastConfig.getAudioChannel() * 2 * C.REC_BUFFER_SEC);
 
             return Math.max(recBufferSizeMin, recBufferSize);
         }
         
         /**
-         * AudioRecordからデータを読み込みRecBufferに書き込む
+         * AudioRecordからデータを読み込みPCMバッファ{@link #mPcmBuffer}に書き込む
          * 
          * @param audioRecord AudioRecord
-         * @param recBuffer RecBuffer
          * @return 0:成功 -1:録音ができない
          */
-        private int copyFormAudioRecordToRecBuffer(AudioRecord audioRecord, short[] recBuffer) {
-            int readSize = 0;
+        private int copyFormAudioRecordToRecBuffer(AudioRecord audioRecord) {
+            int readLength = 0;
             int availableDataSize = 0;
+
+            final int readRecBufferSize = (int) (mBroadcastConfig.getAudioSampleRate()
+                    * mBroadcastConfig.getAudioChannel() * (C.READ_REC_BUFFER_MSEC / 1000f));
+            Log.d(C.TAG, "Read rec buffersize is " + String.valueOf(readRecBufferSize / 2)
+                    + " bytes.");
+            short[] readRecBuffer = new short[readRecBufferSize];
 
             try {
                 while (mBroadcastState.isConnectingOrBroadcasting()) {
-                    readSize = audioRecord.read(recBuffer, 0, recBuffer.length);
-                    if (readSize < 0) {
+                    readLength = audioRecord.read(readRecBuffer, 0, readRecBuffer.length);
+                    if (readLength < 0) {
                         return -1;
                     }
                     // データが読み込めなかった場合は何もしない
-                    else if (readSize == 0) {
+                    else if (readLength == 0) {
                         ;
                     }
                     // データが入っている場合
                     else {
                         // 音声のボリュームを調整する
-                        changeVolume(recBuffer, readSize);
+                        changeVolume(readRecBuffer, readLength);
 
-                        notifyLoudness(recBuffer, readSize);
+                        notifyLoudness(readRecBuffer, readLength);
 
                         synchronized (mPcmBufferLock) {
                             // バッファに書き込む
-                            mPcmBuffer.put(recBuffer, 0, readSize);
+                            mPcmBuffer.put(readRecBuffer, 0, readLength);
                             availableDataSize = mPcmBuffer.getAvailable();
                             mPcmBufferLock.notifyAll();
                             if (C.LOCAL_LOG) {
@@ -586,7 +584,7 @@ public class VoiceSender {
                         }
                         if (C.LOCAL_LOG) {
                             Log.v(C.TAG,
-                                    "Wrote PCM buffer(" + String.valueOf(readSize)
+                                    "Wrote PCM buffer(" + String.valueOf(readLength / 2)
                                             + " bytes). Available buffersize is "
                                             + String.valueOf(availableDataSize) + " bytes.");
                         }
@@ -788,7 +786,7 @@ public class VoiceSender {
             final int readBufferSize = getReadPcmBufferSize();
             // 読み込みバッファ
             short[] readBuffer = new short[readBufferSize];
-            Log.d(C.TAG, "Read buffersize is " + String.valueOf(readBufferSize) + " bytes.");
+            Log.d(C.TAG, "Read buffersize is " + String.valueOf(readBufferSize / 2) + " bytes.");
 
             // MP3バッファサイズ
             final int mp3BufferSize = getMp3BufferSize(readBufferSize);
@@ -875,17 +873,17 @@ public class VoiceSender {
          * PCMバッファ{@link #mPcmBuffer}から指定のバッファにデータをコピーする
          * 
          * @param buffer コピー先のバッファ
-         * @return コピーしたデータのサイズ
+         * @return コピーしたデータの長さ
          * @throws InterruptedException 
          */
         private int copyFromPcmBufferToBuffer(short[] buffer) throws InterruptedException {
-            int copySize = 0;
+            int copyLength = 0;
             while (mBroadcastState.isConnectingOrBroadcasting()) {
                 synchronized (mPcmBufferLock) {
-                    final int availableSize = mPcmBuffer.getAvailable();
-                    if (availableSize != 0) {
-                        copySize = Math.min(availableSize, buffer.length);
-                        copySize = mPcmBuffer.get(buffer, 0, copySize);
+                    final int availableLength = mPcmBuffer.getAvailable();
+                    if (availableLength != 0) {
+                        copyLength = Math.min(availableLength, buffer.length);
+                        copyLength = mPcmBuffer.get(buffer, 0, copyLength);
                     } else {
                         if (C.LOCAL_LOG) {
                             Log.v(C.TAG, "Wait to read PCM buffer.");
@@ -894,15 +892,15 @@ public class VoiceSender {
                         mPcmBufferLock.wait();
                     }
                 }
-                if (copySize != 0) {
+                if (copyLength != 0) {
                     if (C.LOCAL_LOG) {
-                        Log.v(C.TAG, "Read PCM buffer(" + String.valueOf(copySize) + " bytes).");
+                        Log.v(C.TAG, "Read PCM buffer(" + String.valueOf(copyLength / 2) + " bytes).");
                     }
                     break;
                 }
             }
 
-            return copySize;
+            return copyLength;
         }
 
         /**
