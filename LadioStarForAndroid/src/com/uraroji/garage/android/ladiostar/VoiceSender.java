@@ -31,6 +31,7 @@ import android.util.Log;
 
 import com.uraroji.garage.android.ladiostar.util.ByteRingBuffer;
 import com.uraroji.garage.android.ladiostar.util.ShortRingBuffer;
+import com.uraroji.garage.android.lame.Encoder;
 import com.uraroji.garage.android.lame.Lame;
 import com.uraroji.garage.android.netladiolib.Server;
 import com.uraroji.garage.android.netladiolib.ServersInfo;
@@ -55,9 +56,7 @@ import java.util.Calendar;
 public class VoiceSender {
 
     static {
-        System.loadLibrary("mp3lame");
-
-        setUserAgentInfo(null, null); 
+        setUserAgentInfo(null, null);
     }
 
     /**
@@ -712,11 +711,11 @@ public class VoiceSender {
         public void run() {
             Log.d(C.TAG, "Start Encode thread.");
 
-            Lame encoder = null;
+            Encoder encoder = null;
             try {
                 Lame.log(C.LOCAL_LOG);
                 // Lame init
-                encoder = new Lame.Builder(
+                encoder = new Encoder.Builder(
                         mBroadcastConfig.getAudioSampleRate(),
                         mBroadcastConfig.getAudioChannel(),
                         mBroadcastConfig.getAudioSampleRate(),
@@ -764,8 +763,10 @@ public class VoiceSender {
                 notifyRecStateChangedHandle(MSG_ERROR_MP3_BUFFER_OVERFLOW);
                 return;
             } finally {
-                encoder.close();
-                Log.d(C.TAG, "SimpleLame is closed.");
+                if (encoder != null) {
+                    encoder.close();
+                    Log.d(C.TAG, "SimpleLame is closed.");
+                }
                 synchronized (mMp3BufferLock) {
                     mMp3BufferLock.notifyAll();
                 }
@@ -782,7 +783,7 @@ public class VoiceSender {
          * @return 0:成功 -1:エンコード失敗
          * @throws InterruptedException
          */
-        private int encode(Lame encoder)
+        private int encode(Encoder encoder)
                 throws InterruptedException {
             final int readBufferSize = getReadPcmBufferSize();
             // 読み込みバッファ
@@ -910,7 +911,7 @@ public class VoiceSender {
          * @param encoder エンコーダ
          * @return 0:成功 -1:エンコード失敗
          */
-        private int flush(Lame encoder) {
+        private int flush(Encoder encoder) {
             // MP3バッファサイズ
             final int mp3BufferSize = getMp3BufferSize(getReadPcmBufferSize());
             // MP3バッファ
