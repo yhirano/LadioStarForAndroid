@@ -1092,7 +1092,7 @@ public class MainActivity extends Activity {
                         Log.v(C.TAG, "Start fetching listeners num.");
                     }
 
-                    headline.fecthHeadline(); // ヘッドライン取得
+                    headline.fetchHeadline(); // ヘッドライン取得
                     // ヘッドラインから番組の再生URLと同じURLを持つ番組を探す
                     Channel channel = headline.getChannel(Channel
                             .createPlayUrl(broadcastingInfo.getServerName(),
