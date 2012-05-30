@@ -27,7 +27,8 @@
          <service
             android:icon="@drawable/ic_launcher"
             android:name="BroadcastService"
-            android:process=":service_process" >
+            android:process=":service_process" 
+            android:exported="false">
              <intent-filter>
                 <action android:name="com.uraroji.garage.android.ladiostar.BroadcastServiceInterface" />
             </intent-filter>
