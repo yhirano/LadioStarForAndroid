@@ -262,6 +262,7 @@ public class BroadcastService extends Service {
                     
                     Notification n = new Notification(iconId,
                             notificationTitle, System.currentTimeMillis());
+                    n.flags = Notification.FLAG_ONGOING_EVENT;
                     Intent intent = new Intent(BroadcastService.this,
                             MainActivity.class);
                     PendingIntent contentIntent = PendingIntent
