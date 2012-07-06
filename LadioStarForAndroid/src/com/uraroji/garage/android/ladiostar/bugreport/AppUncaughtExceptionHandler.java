@@ -147,6 +147,7 @@ public class AppUncaughtExceptionHandler implements UncaughtExceptionHandler {
             while ((line = br.readLine()) != null) {
                 sb.append(line).append("\r\n");
             }
+            br.close();
         } catch (Exception e) {
             // バグレポートファイルの中身を取得できない場合は、返す文字列にその旨を記述する
             sb.append("Failed to read bug report file.\r\n");
