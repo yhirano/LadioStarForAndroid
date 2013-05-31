@@ -39,7 +39,7 @@
                 android:layout_alignParentBottom="true"
                 android:layout_marginBottom="2dp"
                 ads:adSize="BANNER"
-                ads:adUnitId="a14d75c02f46e22"
+                ads:adUnitId="AD_UNIT_ID"
                 ads:loadAdOnCreate="true" />
 
             <LinearLayout
