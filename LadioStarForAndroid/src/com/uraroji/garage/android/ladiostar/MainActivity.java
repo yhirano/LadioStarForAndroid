@@ -50,7 +50,6 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
-import com.uraroji.garage.android.ladiostar.bugreport.AppUncaughtExceptionHandler;
 import com.uraroji.garage.android.ladiostar.util.RandomStringUtils;
 import com.uraroji.garage.android.netladiolib.Channel;
 import com.uraroji.garage.android.netladiolib.Headline;
@@ -202,10 +201,6 @@ public class MainActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-
-        // 補足されない例外をキャッチするハンドラを登録（バグレポート用）
-        Thread.setDefaultUncaughtExceptionHandler(new AppUncaughtExceptionHandler(
-                this));
 
         // VoiceSenderManager初期化
         BroadcastManager.getConnector().init(getApplicationContext());
@@ -383,9 +378,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-
-        // 前回バグで強制終了した場合はダイアログ表示
-        AppUncaughtExceptionHandler.showBugReportDialogIfExist();
 
         // 配信情報の表示を表示する
         invalidateBroadcastSetting();
